@@ -14,7 +14,7 @@ import android.view.ViewGroup;
  * its rows need.
  */
 final class Grid extends ViewGroup {
-    private final int hGap, vGap;
+    private int hGap, vGap;
 
     Grid(Context c) {
         super(c);
@@ -22,6 +22,18 @@ final class Grid extends ViewGroup {
         setClipToPadding(false);
         hGap = Ui.dp(c, 18);
         vGap = Ui.dp(c, 18);
+    }
+
+    /** Wider gaps leave room for Lift and glow, which draws past the card's edges. */
+    void setGaps(int h, int v) {
+        if (h == hGap && v == vGap) return;
+        hGap = h;
+        vGap = v;
+        requestLayout();
+    }
+
+    int horizontalGap() {
+        return hGap;
     }
 
     private int columns(int availableWidth, int childWidth) {

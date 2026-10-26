@@ -103,7 +103,28 @@ final class Config {
             new String[] {"off", "on"},
             new String[] {"Off", "On"});
 
-    static final Choice[] CHOICES = {ACCENT, TILES, LAYOUT, ORDER, LABELS, CLOCK, MEMORY, INPUTS, SWITCH, BACKGROUND, DIM, ROTATE, LOCK};
+    /** Grid only: a number sizes 16:9 cards so exactly that many fill the width; auto packs by tile size. */
+    static final Choice COLUMNS = new Choice("columns", "Grid columns", "auto",
+            new String[] {"auto", "3", "4", "5"},
+            new String[] {"By tile size", "3", "4", "5"});
+    /** Outline: an accent ring. Lift and glow: the card rises, grows and glows, with rounder corners. */
+    static final Choice FOCUS = new Choice("focus", "Focus style", "ring",
+            new String[] {"ring", "glow"},
+            new String[] {"Outline", "Lift and glow"});
+    static final Choice CLOCK_SIDE = new Choice("clockside", "Clock position", "left",
+            new String[] {"left", "right"},
+            new String[] {"Left", "Right"});
+    /** A row of Settings and Bluetooth at the bottom; the header buttons give way to it. */
+    static final Choice SHORTCUTS = new Choice("shortcuts", "Quick settings row", "off",
+            new String[] {"off", "on"},
+            new String[] {"Hidden", "Shown"});
+    /** Applied once when a wallpaper is decoded; Android 7.1 to 11 have no live blur. */
+    static final Choice BLUR = new Choice("blur", "Image blur", "off",
+            new String[] {"off", "soft", "strong"},
+            new String[] {"Off", "Soft", "Strong"});
+
+    static final Choice[] CHOICES = {ACCENT, TILES, LAYOUT, COLUMNS, FOCUS, ORDER, LABELS, CLOCK, CLOCK_SIDE,
+        MEMORY, INPUTS, SHORTCUTS, SWITCH, BACKGROUND, DIM, BLUR, ROTATE, LOCK};
 
     /** Folder of wallpapers, next to home.conf, that Background › Image file rotates through. */
     static final String WALLPAPERS = "wallpapers";

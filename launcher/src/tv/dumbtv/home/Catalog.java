@@ -93,6 +93,14 @@ final class Catalog {
     }
 
     static void setShown(Config cfg, String kind, Item it, boolean on) {
+        List<String> only = APPS.equals(kind) ? cfg.list("apps.only") : Collections.<String>emptyList();
+        if (!only.isEmpty()) {
+            // apps.only decides alone: hiding drops the app from it, showing appends it.
+            only.remove(it.id);
+            if (on) only.add(it.id);
+            cfg.setList("apps.only", only);
+            return;
+        }
         List<String> hide = cfg.list(kind + ".hide");
         hide.remove(it.id);
         if (!on && (it.leanback || !APPS.equals(kind))) hide.add(it.id);
@@ -110,12 +118,17 @@ final class Catalog {
         return visible(cfg, kind, all, null);
     }
 
-    /** As above, then newest first by {@code recent} (package to last-used time) when it is set. */
+    /**
+     * As above, then newest first by {@code recent} (package to last-used time) when it is set.
+     * A non-empty {@code apps.only} list replaces hide/show and order for apps: exactly those
+     * packages, in that order, so an app installed later never appears on its own.
+     */
     static List<Item> visible(Config cfg, String kind, List<Item> all, Map<String, Long> recent) {
-        List<String> order = cfg.list(kind + ".order");
+        List<String> only = APPS.equals(kind) ? cfg.list("apps.only") : Collections.<String>emptyList();
+        List<String> order = only.isEmpty() ? cfg.list(kind + ".order") : only;
         List<Item> out = new ArrayList<>();
         for (Item it : all) {
-            if (shown(cfg, kind, it)) out.add(it);
+            if (only.isEmpty() ? shown(cfg, kind, it) : only.contains(it.id)) out.add(it);
         }
         Collections.sort(out, (a, b) -> Integer.compare(rank(order, a.id), rank(order, b.id)));
         // The sort is stable, so apps with no record keep the user's order after the rest.
@@ -130,10 +143,12 @@ final class Catalog {
 
     /** Saves {@code ids} as the new order, keeping the old positions of hidden items after them. */
     static void saveOrder(Config cfg, String kind, List<String> ids) {
+        // With apps.only set, that list is the order; keep its not-installed entries at the end.
+        String key = APPS.equals(kind) && !cfg.list("apps.only").isEmpty() ? "apps.only" : kind + ".order";
         List<String> order = new ArrayList<>(ids);
-        for (String id : cfg.list(kind + ".order")) {
+        for (String id : cfg.list(key)) {
             if (!order.contains(id)) order.add(id);
         }
-        cfg.setList(kind + ".order", order);
+        cfg.setList(key, order);
     }
 }

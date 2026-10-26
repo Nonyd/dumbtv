@@ -58,7 +58,9 @@ public final class Home extends Activity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final ExecutorService colorIo = Executors.newSingleThreadExecutor();
     private final List<TextView> chips = new ArrayList<>();
+    private final List<TextView> quickChips = new ArrayList<>();
     private Config cfg;
+    private LinearLayout head, when, quick;
     private TvInputManager tv;
     private int applied = -1, appsGeneration;
     private boolean resumed, landed, unlockOpened;
@@ -372,6 +374,9 @@ public final class Home extends Activity {
                 }
             }
         }
+        if (quick.getVisibility() == View.VISIBLE) {
+            rows.add(new int[] {topIn(quick, content), topIn(quick, content) + quick.getHeight()});
+        }
         return rows;
     }
 
@@ -479,12 +484,12 @@ public final class Home extends Activity {
         column.setPadding(0, dp(40), 0, dp(32));
         scroll.addView(column, new FrameLayout.LayoutParams(MATCH, WRAP));
 
-        LinearLayout head = new LinearLayout(this);
+        head = new LinearLayout(this);
         head.setClipChildren(false);
         head.setClipToPadding(false);
         head.setGravity(Gravity.TOP);
         head.setPadding(dp(56), 0, dp(56), dp(12));
-        LinearLayout when = new LinearLayout(this);
+        when = new LinearLayout(this);
         when.setOrientation(LinearLayout.VERTICAL);
         clock = Ui.text(this, 52, Ui.TEXT, Ui.LIGHT);
         date = Ui.text(this, 15, Ui.MUTED, Ui.MEDIUM);
@@ -504,7 +509,62 @@ public final class Home extends Activity {
 
         apps = new Row(Catalog.APPS, "Apps", column);
         inputs = new Row(Catalog.INPUTS, "Inputs", column);
+
+        quick = new LinearLayout(this);
+        quick.setGravity(Gravity.CENTER_HORIZONTAL);
+        quick.setClipChildren(false);
+        quick.setClipToPadding(false);
+        quick.setPadding(dp(56), dp(28), dp(56), dp(8));
+        quick.addView(quickChip("Settings", v -> openSettings()));
+        Intent bluetooth = bluetoothSettings();
+        if (bluetooth != null) quick.addView(quickChip("Bluetooth", v -> launch(new Intent(bluetooth), null)));
+        column.addView(quick, new LinearLayout.LayoutParams(MATCH, WRAP));
         return root;
+    }
+
+    /**
+     * Fire OS has no android.settings.BLUETOOTH_SETTINGS; its Controllers & Bluetooth Devices
+     * screen answers CONTROLLERS_SETTINGS. Plain Android TV answers the Bluetooth action instead.
+     */
+    private Intent bluetoothSettings() {
+        for (String action : new String[] {"android.settings.CONTROLLERS_SETTINGS", Settings.ACTION_BLUETOOTH_SETTINGS}) {
+            Intent i = new Intent(action);
+            if (i.resolveActivity(getPackageManager()) != null) return i;
+        }
+        return null;
+    }
+
+    /** A pill in the bottom quick settings row; same look as the header chips, a size larger. */
+    private TextView quickChip(String label, View.OnClickListener click) {
+        TextView v = Ui.text(this, 16, Ui.TEXT, Ui.MEDIUM);
+        v.setText(label);
+        v.setGravity(Gravity.CENTER);
+        v.setPadding(dp(26), dp(11), dp(26), dp(11));
+        v.setFocusable(true);
+        v.setClickable(true);
+        v.setOnClickListener(click);
+        v.setOnFocusChangeListener((view, has) -> {
+            view.animate().scaleX(has ? 1.08f : 1f).scaleY(has ? 1.08f : 1f).setDuration(140).start();
+            if (has) focusBackground(null);
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(WRAP, WRAP);
+        lp.leftMargin = dp(9);
+        lp.rightMargin = dp(9);
+        v.setLayoutParams(lp);
+        quickChips.add(v);
+        return v;
+    }
+
+    /** Clock left with the Options and Settings chips right, or (Clock position › Right) the clock alone at the right. */
+    private void layoutHead() {
+        boolean right = "right".equals(cfg.get(Config.CLOCK_SIDE));
+        head.removeAllViews();
+        when.setGravity(right ? Gravity.END : Gravity.START);
+        clock.setGravity(right ? Gravity.END : Gravity.START);
+        date.setPadding(right ? 0 : dp(2), dp(8), right ? dp(2) : 0, 0);
+        if (right) head.addView(new View(this), new LinearLayout.LayoutParams(0, 0, 1f));
+        head.addView(when, right ? new LinearLayout.LayoutParams(WRAP, WRAP) : new LinearLayout.LayoutParams(0, WRAP, 1f));
+        for (TextView c : chips) head.addView(c);
     }
 
     /**
@@ -566,10 +626,18 @@ public final class Home extends Activity {
     private void apply() {
         applied = cfg.version();
         int accent = cfg.accent();
+        boolean shortcuts = "on".equals(cfg.get(Config.SHORTCUTS));
+        layoutHead();
         for (TextView c : chips) {
             Ui.focusStyle(c, accent, 0x14FFFFFF, dp(18));
-            c.setVisibility(locked() ? View.GONE : View.VISIBLE);
+            // The quick settings row takes over Settings; Options stays on the Menu button.
+            c.setVisibility(locked() || shortcuts ? View.GONE : View.VISIBLE);
         }
+        for (TextView c : quickChips) Ui.focusStyle(c, accent, 0x1FFFFFFF, dp(24));
+        quick.setVisibility(shortcuts && !locked() ? View.VISIBLE : View.GONE);
+        boolean glow = "glow".equals(cfg.get(Config.FOCUS));
+        apps.grid.setGaps(dp(glow ? 40 : 18), dp(glow ? 28 : 18));
+        inputs.grid.setGaps(dp(glow ? 40 : 18), dp(glow ? 28 : 18));
         meter.setVisibility("on".equals(cfg.get(Config.MEMORY)) ? View.VISIBLE : View.GONE);
         meter.setAccent(accent);
         render(apps);
@@ -642,9 +710,10 @@ public final class Home extends Activity {
         int w = size[0], h = Catalog.APPS.equals(row.kind) ? size[1] : Math.round(size[1] * 0.56f);
         String labels = cfg.get(Config.LABELS);
         int accent = cfg.accent();
+        boolean glow = "glow".equals(cfg.get(Config.FOCUS));
         int index = 0, restore = -1;
         for (Item it : shown) {
-            Tile t = new Tile(this, it, row.kind, Catalog.label(cfg, it), w, h, labels, accent);
+            Tile t = new Tile(this, it, row.kind, Catalog.label(cfg, it), w, h, labels, accent, glow);
             t.setOnClickListener(v -> open((Tile) v));
             t.setOnFocusChangeListener((v, has) -> {
                 if (has) focusBackground(((Tile) v).item);
@@ -735,6 +804,15 @@ public final class Home extends Activity {
     }
 
     private int[] cardSize() {
+        String columns = cfg.get(Config.COLUMNS);
+        if ("grid".equals(cfg.get(Config.LAYOUT)) && !"auto".equals(columns)) {
+            // 16:9 cards sized so exactly that many fill the width between the 56 dp edges.
+            int n = Integer.parseInt(columns);
+            int gap = dp("glow".equals(cfg.get(Config.FOCUS)) ? 40 : 18);
+            int room = getResources().getDisplayMetrics().widthPixels - 2 * dp(56);
+            int w = (room - (n - 1) * gap) / n;
+            return new int[] {w, w * 9 / 16};
+        }
         switch (cfg.get(Config.TILES)) {
             case "small":
                 return new int[] {dp(144), dp(81)};
@@ -810,7 +888,8 @@ public final class Home extends Activity {
         }
         int dim = Integer.parseInt(cfg.get(Config.DIM));
         shade.setBackgroundColor(file == null ? Color.TRANSPARENT : Color.argb(dim * 255 / 100, 0, 0, 0));
-        String key = file == null ? null : file.getPath() + ":" + file.lastModified();
+        String blur = cfg.get(Config.BLUR);
+        String key = file == null ? null : file.getPath() + ":" + file.lastModified() + ":" + blur;
         if (key == null ? wallKey == null : key.equals(wallKey)) return;
         wallKey = key;
         if (file == null) {
@@ -818,8 +897,8 @@ public final class Home extends Activity {
             return;
         }
         io.execute(() -> {
-            Bitmap b = decode(file, getResources().getDisplayMetrics().widthPixels,
-                    getResources().getDisplayMetrics().heightPixels);
+            Bitmap b = Blur.of(decode(file, getResources().getDisplayMetrics().widthPixels,
+                    getResources().getDisplayMetrics().heightPixels), blur);
             ui.post(() -> {
                 if (key.equals(wallKey)) wall.setImageBitmap(b);
             });
@@ -875,14 +954,15 @@ public final class Home extends Activity {
 
     private void menu(Tile t) {
         boolean app = Catalog.APPS.equals(t.kind);
+        // Options is listed too: with the quick settings row shown, the header chips are hidden.
         String[] actions = app
-                ? new String[] {"Move", "Rename", "Hide", "App info"}
-                : new String[] {"Move", "Rename", "Hide"};
+                ? new String[] {"Move", "Rename", "Hide", "App info", "Options"}
+                : new String[] {"Move", "Rename", "Hide", "Options"};
         new AlertDialog.Builder(this, Ui.DIALOG)
                 .setTitle(Catalog.label(cfg, t.item))
                 .setItems(actions, (d, which) -> {
-                    switch (which) {
-                        case 0:
+                    switch (actions[which]) {
+                        case "Move":
                             if (t.getParent() == null) break;
                             if (app && recentFor(t.kind) != null) {
                                 Toast.makeText(this, "App order is Recently used. Pick Your order "
@@ -892,13 +972,16 @@ public final class Home extends Activity {
                             moving = t;
                             t.setMoving(true);
                             break;
-                        case 1:
+                        case "Rename":
                             rename(t);
                             break;
-                        case 2:
+                        case "Hide":
                             Catalog.setShown(cfg, t.kind, t.item, false);
                             render(app ? apps : inputs);
                             Toast.makeText(this, "Hidden. Bring it back from Options.", Toast.LENGTH_SHORT).show();
+                            break;
+                        case "Options":
+                            startActivity(new Intent(this, Options.class));
                             break;
                         default:
                             launch(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,

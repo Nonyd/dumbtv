@@ -39,7 +39,7 @@ Undo: `./launcher/install.sh --undo` gives HOME back to Amazon's launcher.
 | Remote | Does |
 |---|---|
 | OK | open the app, or switch to the input |
-| Hold OK, or ☰ Menu | Move, Rename, Hide, App info |
+| Hold OK, or ☰ Menu | Move, Rename, Hide, App info, Options |
 | With Child lock on: hold ☰ Menu for 3 s | Options |
 | Move mode | ◀ ▶ moves the tile, ▲ ▼ moves it a line in the grid, any other key drops it |
 | Up from the top row | Options and Settings |
@@ -55,14 +55,18 @@ Undo: `./launcher/install.sh --undo` gives HOME back to Amazon's launcher.
 | Accent | white, blue, cyan, green, amber, red, pink, violet |
 | Tiles | small, medium, large |
 | Layout | rows, or a grid that wraps to as many columns as fit |
+| Grid columns | by tile size, or 3, 4, 5: 16:9 cards sized so exactly that many fill the width |
+| Focus style | outline (an accent ring), or lift and glow: the card rises, grows and glows in the accent color, with rounder corners |
 | App order | your order, or recently used: the apps row re-sorts on each return home, newest first. It counts apps opened from dumbtv home, plus apps opened any other way (voice, another app) on Fire OS 6, where the launcher already has usage access. Apps never opened keep your order after the rest |
 | App names | on focus, always, never |
 | Clock | system, 24-hour, 12-hour |
+| Clock position | left (with the Options and Settings buttons right of it), right |
 | Memory meter | hidden, shown: free memory under the date, with a bar of what is in use; amber, with "running low", when Android reports low memory or under 15% is free. It only shows the numbers: it closes and frees nothing, and needs no permission |
 | Inputs row | shown, hidden |
+| Quick settings row | hidden, shown: Settings and Bluetooth at the bottom. The header buttons hide while it shows; Options is then under ☰ Menu |
 | Open inputs with | Automatic, the TV's app, dumbtv home (see below) |
 | Background | black, graphite, midnight, image, adaptive, adaptive tint |
-| Image dim, wallpaper rotation | for image backgrounds |
+| Image dim, image blur, wallpaper rotation | for image backgrounds; blur (off, soft, strong) is applied once per wallpaper |
 | Child lock | off, on: hides Options and Settings and turns off Hold OK and ☰ Menu on tiles, so the home screen only opens apps and inputs (see below) |
 
 Below them: Next wallpaper, which apps and inputs appear on the home screen, a
@@ -139,12 +143,26 @@ dim=40
 rotate=off
 # off on
 lock=off
+# auto 3 4 5 (grid layout only)
+columns=auto
+# ring glow
+focus=ring
+# left right
+clockside=left
+# off on
+shortcuts=off
+# off soft strong, image backgrounds only
+blur=off
 apps.order=com.amazon.firetv.youtube,org.videolan.vlc
 apps.hide=org.videolan.vlc
 apps.show=com.amazon.venezia
 inputs.hide=com.droidlogic.tvinput/.services.AV1InputService/HW1
 name.com.droidlogic.tvinput/.services.Hdmi2InputService/HW6=PS5
 ```
+
+`apps.only=` takes a list like `apps.order` and, when it is not empty, replaces
+`apps.order`, `apps.hide` and `apps.show`: exactly those apps, in that order, and an
+app installed later never appears by itself. Move and Hide edit that list.
 
 Comments go on their own line. Back it up with `adb pull`, restore it with
 `adb push`; changes apply the next time the home screen comes back.
