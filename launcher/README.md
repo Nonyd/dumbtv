@@ -69,6 +69,7 @@ Undo: `./launcher/install.sh --undo` gives HOME back to Amazon's launcher.
 | Open inputs with | Automatic, the TV's app, dumbtv home (see below) |
 | Background | black, graphite, midnight, image, adaptive, adaptive tint |
 | Image dim, image blur, wallpaper rotation | for image backgrounds; blur (off, soft, strong) is applied once per wallpaper |
+| Screensaver photo time | 15 s, 30 s, 1 min, 2 min: how long each photo stays up in the dumbtv photos screensaver (below) |
 | Child lock | off, on: hides Options and Settings and turns off Hold OK and ☰ Menu on tiles, so the home screen only opens apps and inputs (see below) |
 
 Below them: Next wallpaper, which apps and inputs appear on the home screen, a
@@ -92,6 +93,22 @@ without a TV banner, like the Appstore, start hidden; tick them to add them.
   `TvView`: the picture, the input's name for a moment, and "No signal" when nothing
   is connected. Back returns to the home screen, and HOME releases the input at
   once. Nothing new is requested to do this.
+
+## Screensaver
+
+The APK also carries a screensaver, **dumbtv photos** (`tv.dumbtv.home/.Saver`): the
+same wallpaper photos, full screen and unblurred, cross-fading every **Screensaver
+photo time**, with a small clock at the bottom right. Like the home screen it reads only
+its own folders: no permission, no network. Fire OS uses Android's screensaver setting,
+so it is switched on and off over adb:
+
+```
+adb shell settings put secure screensaver_components tv.dumbtv.home/.Saver
+adb shell settings put secure screensaver_components com.amazon.ftv.screensaver/.app.services.ScreensaverService
+```
+
+It starts after the screen timeout (`settings get system screen_off_timeout`, 5 minutes
+on a Fire TV Stick 4K Max).
 
 ## Child lock
 

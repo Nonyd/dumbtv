@@ -75,6 +75,19 @@
             </intent-filter>
         </receiver>
 
+        <!-- The screensaver. BIND_DREAM_SERVICE means only the system can start it; the app itself
+             still requests no permission. Selected through settings secure screensaver_components. -->
+        <service
+            android:name=".Saver"
+            android:label="@string/saver_label"
+            android:exported="true"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".Guard"
             android:label="@string/guard_label"

@@ -977,7 +977,8 @@ public final class Home extends Activity {
         });
     }
 
-    private static Bitmap decode(File f, int w, int h) {
+    /** {@code f} decoded at the smallest power-of-two sample that still covers {@code w} by {@code h}. */
+    static Bitmap decode(File f, int w, int h) {
         BitmapFactory.Options o = new BitmapFactory.Options();
         o.inJustDecodeBounds = true;
         BitmapFactory.decodeFile(f.getPath(), o);

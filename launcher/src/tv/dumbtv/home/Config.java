@@ -136,8 +136,13 @@ final class Config {
             new String[] {"off", "on"},
             new String[] {"Off", "On"});
 
+    /** Seconds each photo stays up in the screensaver (the Saver dream) before the next fades in. */
+    static final Choice SAVER = new Choice("saver", "Screensaver photo time", "30",
+            new String[] {"15", "30", "60", "120"},
+            new String[] {"15 seconds", "30 seconds", "1 minute", "2 minutes"});
+
     static final Choice[] CHOICES = {ACCENT, TILES, LAYOUT, COLUMNS, FIT, FOCUS, ORDER, LABELS, TITLES, CLOCK, CLOCK_SIDE,
-        MEMORY, INPUTS, SHORTCUTS, SWITCH, BACKGROUND, DIM, BLUR, ROTATE, LOCK};
+        MEMORY, INPUTS, SHORTCUTS, SWITCH, BACKGROUND, DIM, BLUR, ROTATE, SAVER, LOCK};
 
     /** Folder of wallpapers, next to home.conf, that Background › Image file rotates through. */
     static final String WALLPAPERS = "wallpapers";
