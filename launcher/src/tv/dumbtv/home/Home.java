@@ -515,9 +515,9 @@ public final class Home extends Activity {
         quick.setClipChildren(false);
         quick.setClipToPadding(false);
         quick.setPadding(dp(56), dp(28), dp(56), dp(8));
-        quick.addView(quickChip("Settings", v -> openSettings()));
+        quick.addView(quickChip("Settings", v -> openSettings(true)));
         Intent bluetooth = bluetoothSettings();
-        if (bluetooth != null) quick.addView(quickChip("Bluetooth", v -> launch(new Intent(bluetooth), null)));
+        if (bluetooth != null) quick.addView(quickChip("Bluetooth", v -> launchFresh(new Intent(bluetooth))));
         column.addView(quick, new LinearLayout.LayoutParams(MATCH, WRAP));
         return root;
     }
@@ -922,10 +922,29 @@ public final class Home extends Activity {
      * Guard then replaces with ours. The TV settings entry point opens the real settings screen.
      */
     private void openSettings() {
+        openSettings(false);
+    }
+
+    private void openSettings(boolean fresh) {
         Intent tvSettings = new Intent(Intent.ACTION_MAIN)
                 .addCategory("android.intent.category.LEANBACK_SETTINGS");
         boolean found = tvSettings.resolveActivity(getPackageManager()) != null;
-        launch(found ? tvSettings : new Intent(Settings.ACTION_SETTINGS), null);
+        Intent i = found ? tvSettings : new Intent(Settings.ACTION_SETTINGS);
+        if (fresh) launchFresh(i);
+        else launch(i, null);
+    }
+
+    /**
+     * For the quick settings row: replaces any settings task left in the background, which
+     * {@link #launch}'s NEW_TASK | RESET_TASK_IF_NEEDED would bring to front showing whatever
+     * screen it was last on (Display & Sounds instead of Bluetooth, seen on Fire OS 8.1.8.5).
+     */
+    private void launchFresh(Intent i) {
+        try {
+            startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Toast.makeText(this, "Could not open that", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void open(Tile t) {
