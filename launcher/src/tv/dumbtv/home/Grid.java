@@ -14,7 +14,7 @@ import android.view.ViewGroup;
  * its rows need.
  */
 final class Grid extends ViewGroup {
-    private int hGap, vGap;
+    private int hGap, vGap, fixedColumns;
 
     Grid(Context c) {
         super(c);
@@ -36,8 +36,16 @@ final class Grid extends ViewGroup {
         return hGap;
     }
 
+    /** A fixed column count (0 = as many as fit); the block of columns is then centered. */
+    void setColumns(int n) {
+        if (n == fixedColumns) return;
+        fixedColumns = n;
+        requestLayout();
+    }
+
     private int columns(int availableWidth, int childWidth) {
-        return Math.max(1, (availableWidth + hGap) / (childWidth + hGap));
+        int fit = Math.max(1, (availableWidth + hGap) / (childWidth + hGap));
+        return fixedColumns > 0 ? Math.min(fixedColumns, fit) : fit;
     }
 
     /** Columns in the current layout; 1 before the first layout pass or with no tiles. */
@@ -75,9 +83,11 @@ final class Grid extends ViewGroup {
         int cw = first.getMeasuredWidth(), ch = first.getMeasuredHeight();
         int avail = Math.max(0, (r - l) - getPaddingLeft() - getPaddingRight());
         int cols = columns(avail, cw);
+        int start = getPaddingLeft();
+        if (fixedColumns > 0) start += Math.max(0, avail - (cols * cw + (cols - 1) * hGap)) / 2;
         for (int i = 0; i < n; i++) {
             int col = i % cols, row = i / cols;
-            int x = getPaddingLeft() + col * (cw + hGap);
+            int x = start + col * (cw + hGap);
             int y = getPaddingTop() + row * (ch + vGap);
             getChildAt(i).layout(x, y, x + cw, y + ch);
         }

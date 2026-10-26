@@ -22,6 +22,7 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.format.DateFormat;
 import android.text.style.RelativeSizeSpan;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -60,7 +61,7 @@ public final class Home extends Activity {
     private final List<TextView> chips = new ArrayList<>();
     private final List<TextView> quickChips = new ArrayList<>();
     private Config cfg;
-    private LinearLayout head, when, quick;
+    private LinearLayout column, head, when, quick;
     private TvInputManager tv;
     private int applied = -1, appsGeneration;
     private boolean resumed, landed, unlockOpened;
@@ -166,7 +167,7 @@ public final class Home extends Activity {
 
         void setVisible(boolean on) {
             boolean gridMode = "grid".equals(cfg.get(Config.LAYOUT));
-            title.setVisibility(on ? View.VISIBLE : View.GONE);
+            title.setVisibility(on && "on".equals(cfg.get(Config.TITLES)) ? View.VISIBLE : View.GONE);
             scroll.setVisibility(on && !gridMode ? View.VISIBLE : View.GONE);
             grid.setVisibility(on && gridMode ? View.VISIBLE : View.GONE);
         }
@@ -212,8 +213,10 @@ public final class Home extends Activity {
             loadApps(null);
             return;
         }
-        int fit = getResources().getDisplayMetrics().widthPixels / (cardSize()[0] + dp(18)) + 1;
-        for (Item it : Catalog.visible(cfg, Catalog.APPS, apps.all, recentFor(Catalog.APPS))) {
+        List<Item> visible = Catalog.visible(cfg, Catalog.APPS, apps.all, recentFor(Catalog.APPS));
+        int fit = getResources().getDisplayMetrics().widthPixels / (cardSize(visible.size())[0] + dp(18)) + 1;
+        if (fit()) fit = visible.size();
+        for (Item it : visible) {
             if (fit-- <= 0) break;
             Catalog.art(getPackageManager(), it);
             it.artRequested = true;
@@ -361,14 +364,16 @@ public final class Home extends Activity {
     private List<int[]> rowBlocks(View content) {
         List<int[]> rows = new ArrayList<>();
         for (Row row : new Row[] {apps, inputs}) {
+            // A hidden title keeps a stale position, so the row then starts at its tiles.
+            boolean titled = row.title.getVisibility() == View.VISIBLE;
             if (row.scroll.getVisibility() == View.VISIBLE) {
-                rows.add(new int[] {topIn(row.title, content), topIn(row.scroll, content) + row.scroll.getHeight()});
+                rows.add(new int[] {topIn(titled ? row.title : row.scroll, content), topIn(row.scroll, content) + row.scroll.getHeight()});
             } else if (row.grid.getVisibility() == View.VISIBLE) {
                 int gridTop = topIn(row.grid, content), lastTop = Integer.MIN_VALUE;
                 for (int i = 0; i < row.grid.getChildCount(); i++) {
                     View t = row.grid.getChildAt(i);
                     if (t.getTop() == lastTop) continue;
-                    int start = lastTop == Integer.MIN_VALUE ? topIn(row.title, content) : gridTop + t.getTop() - dp(12);
+                    int start = lastTop == Integer.MIN_VALUE && titled ? topIn(row.title, content) : gridTop + t.getTop() - dp(12);
                     lastTop = t.getTop();
                     rows.add(new int[] {start, gridTop + t.getBottom() + dp(8)});
                 }
@@ -396,7 +401,7 @@ public final class Home extends Activity {
     private void fitBottom(ScrollView page) {
         View content = page.getChildAt(0);
         if (content == null || page.getHeight() == 0) return;
-        int base = dp(32), height = page.getHeight();
+        int base = dp(fit() ? 12 : 32), height = page.getHeight();
         int natural = content.getHeight() - content.getPaddingBottom() + base;
         int want = base;
         if (natural > height) {
@@ -468,7 +473,7 @@ public final class Home extends Activity {
         scroll.setClipChildren(false);
         root.addView(scroll, new FrameLayout.LayoutParams(MATCH, MATCH));
 
-        LinearLayout column = new LinearLayout(this) {
+        column = new LinearLayout(this) {
             @Override
             public View focusSearch(View focused, int direction) {
                 if (direction == View.FOCUS_DOWN && chips.contains(focused)) {
@@ -557,11 +562,35 @@ public final class Home extends Activity {
 
     /** Clock left with the Options and Settings chips right, or (Clock position › Right) the clock alone at the right. */
     private void layoutHead() {
-        boolean right = "right".equals(cfg.get(Config.CLOCK_SIDE));
+        boolean right = "right".equals(cfg.get(Config.CLOCK_SIDE)), fit = fit();
         head.removeAllViews();
-        when.setGravity(right ? Gravity.END : Gravity.START);
+        when.removeAllViews();
+        if (fit) {
+            // One line, date then time, so the cards get the height.
+            when.setOrientation(LinearLayout.HORIZONTAL);
+            when.setGravity(Gravity.CENTER_VERTICAL | (right ? Gravity.END : Gravity.START));
+            clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+            date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            date.setPadding(0, 0, dp(14), 0);
+            when.addView(date);
+            when.addView(clock);
+        } else {
+            when.setOrientation(LinearLayout.VERTICAL);
+            when.setGravity(right ? Gravity.END : Gravity.START);
+            clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 52);
+            date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            date.setPadding(right ? 0 : dp(2), dp(8), right ? dp(2) : 0, 0);
+            when.addView(clock);
+            when.addView(date);
+        }
+        LinearLayout.LayoutParams under = new LinearLayout.LayoutParams(WRAP, WRAP);
+        under.topMargin = dp(12);
+        under.leftMargin = dp(2);
+        when.addView(meter, under);
         clock.setGravity(right ? Gravity.END : Gravity.START);
-        date.setPadding(right ? 0 : dp(2), dp(8), right ? dp(2) : 0, 0);
+        column.setPadding(0, dp(fit ? 24 : 40), 0, dp(32));
+        head.setPadding(dp(56), 0, dp(56), dp(fit ? 4 : 12));
+        quick.setPadding(dp(56), dp(fit ? 34 : 28), dp(56), dp(8));
         if (right) head.addView(new View(this), new LinearLayout.LayoutParams(0, 0, 1f));
         head.addView(when, right ? new LinearLayout.LayoutParams(WRAP, WRAP) : new LinearLayout.LayoutParams(0, WRAP, 1f));
         for (TextView c : chips) head.addView(c);
@@ -636,8 +665,12 @@ public final class Home extends Activity {
         for (TextView c : quickChips) Ui.focusStyle(c, accent, 0x1FFFFFFF, dp(24));
         quick.setVisibility(shortcuts && !locked() ? View.VISIBLE : View.GONE);
         boolean glow = "glow".equals(cfg.get(Config.FOCUS));
-        apps.grid.setGaps(dp(glow ? 40 : 18), dp(glow ? 28 : 18));
-        inputs.grid.setGaps(dp(glow ? 40 : 18), dp(glow ? 28 : 18));
+        String columns = cfg.get(Config.COLUMNS);
+        int fixed = "auto".equals(columns) ? 0 : Integer.parseInt(columns);
+        for (Row row : new Row[] {apps, inputs}) {
+            row.grid.setGaps(dp(glow ? 40 : 18), rowGap());
+            row.grid.setColumns(fixed);
+        }
         meter.setVisibility("on".equals(cfg.get(Config.MEMORY)) ? View.VISIBLE : View.GONE);
         meter.setAccent(accent);
         render(apps);
@@ -706,14 +739,14 @@ public final class Home extends Activity {
         boolean enabled = !Catalog.INPUTS.equals(row.kind) || "on".equals(cfg.get(Config.INPUTS));
         List<Item> shown = enabled ? Catalog.visible(cfg, row.kind, row.all, recentFor(row.kind))
                 : new ArrayList<>();
-        int[] size = cardSize();
+        int[] size = cardSize(shown.size());
         int w = size[0], h = Catalog.APPS.equals(row.kind) ? size[1] : Math.round(size[1] * 0.56f);
         String labels = cfg.get(Config.LABELS);
         int accent = cfg.accent();
-        boolean glow = "glow".equals(cfg.get(Config.FOCUS));
+        boolean glow = "glow".equals(cfg.get(Config.FOCUS)), fit = fit();
         int index = 0, restore = -1;
         for (Item it : shown) {
-            Tile t = new Tile(this, it, row.kind, Catalog.label(cfg, it), w, h, labels, accent, glow);
+            Tile t = new Tile(this, it, row.kind, Catalog.label(cfg, it), w, h, labels, accent, glow, fit);
             t.setOnClickListener(v -> open((Tile) v));
             t.setOnFocusChangeListener((v, has) -> {
                 if (has) focusBackground(((Tile) v).item);
@@ -803,7 +836,20 @@ public final class Home extends Activity {
         }
     }
 
-    private int[] cardSize() {
+    /** Options › Fit to one screen, which needs the grid with a column count. */
+    private boolean fit() {
+        return "on".equals(cfg.get(Config.FIT)) && "grid".equals(cfg.get(Config.LAYOUT))
+                && !"auto".equals(cfg.get(Config.COLUMNS));
+    }
+
+    /** The grid's gap between lines: with names drawn under the focused card, it holds the name. */
+    private int rowGap() {
+        if (fit()) return dp(34);
+        return dp("glow".equals(cfg.get(Config.FOCUS)) ? 28 : 18);
+    }
+
+    /** Card size for a row of {@code count} items. */
+    private int[] cardSize(int count) {
         String columns = cfg.get(Config.COLUMNS);
         if ("grid".equals(cfg.get(Config.LAYOUT)) && !"auto".equals(columns)) {
             // 16:9 cards sized so exactly that many fill the width between the 56 dp edges.
@@ -811,6 +857,12 @@ public final class Home extends Activity {
             int gap = dp("glow".equals(cfg.get(Config.FOCUS)) ? 40 : 18);
             int room = getResources().getDisplayMetrics().widthPixels - 2 * dp(56);
             int w = (room - (n - 1) * gap) / n;
+            if (fit() && count > 0) {
+                // Then no taller than lets every line, the header and the quick row share the screen.
+                int lines = (count + n - 1) / n;
+                int h = (fitHeight() - (lines - 1) * rowGap()) / lines;
+                w = Math.min(w, h * 16 / 9);
+            }
             return new int[] {w, w * 9 / 16};
         }
         switch (cfg.get(Config.TILES)) {
@@ -821,6 +873,26 @@ public final class Home extends Activity {
             default:
                 return new int[] {dp(180), dp(101)};
         }
+    }
+
+    /**
+     * Screen height left for the apps grid's cards and line gaps: everything else on the page is
+     * measured as it stands (header, titles, quick row), plus the bottom padding fitBottom keeps.
+     */
+    private int fitHeight() {
+        int width = View.MeasureSpec.makeMeasureSpec(getResources().getDisplayMetrics().widthPixels, View.MeasureSpec.EXACTLY);
+        int free = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+        int used = column.getPaddingTop() + dp(12) + apps.grid.getPaddingTop() + apps.grid.getPaddingBottom();
+        boolean titles = "on".equals(cfg.get(Config.TITLES));
+        for (View v : new View[] {head, apps.title, quick}) {
+            // render() sets the title's visibility after sizing the cards, so ask the setting.
+            if (v == apps.title ? !titles : v.getVisibility() == View.GONE) continue;
+            v.measure(width, free);
+            used += v.getMeasuredHeight();
+        }
+        // Without the quick row below, the last line's name needs its own room.
+        if (quick.getVisibility() == View.GONE) used += rowGap();
+        return getResources().getDisplayMetrics().heightPixels - used;
     }
 
     private void focusFirst() {

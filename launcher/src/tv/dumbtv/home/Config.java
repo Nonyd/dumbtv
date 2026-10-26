@@ -123,7 +123,20 @@ final class Config {
             new String[] {"off", "soft", "strong"},
             new String[] {"Off", "Soft", "Strong"});
 
-    static final Choice[] CHOICES = {ACCENT, TILES, LAYOUT, COLUMNS, FOCUS, ORDER, LABELS, CLOCK, CLOCK_SIDE,
+    /** The small "APPS" / "INPUTS" headings above each row. */
+    static final Choice TITLES = new Choice("titles", "Row titles", "on",
+            new String[] {"on", "off"},
+            new String[] {"Shown", "Hidden"});
+    /**
+     * Grid with a column count only: cards as large as fit with every app, the clock and the quick
+     * settings row on one screen, no scrolling. The clock and date share one line, and app names
+     * show in the gap under the focused card instead of a strip under every row.
+     */
+    static final Choice FIT = new Choice("fit", "Fit to one screen", "off",
+            new String[] {"off", "on"},
+            new String[] {"Off", "On"});
+
+    static final Choice[] CHOICES = {ACCENT, TILES, LAYOUT, COLUMNS, FIT, FOCUS, ORDER, LABELS, TITLES, CLOCK, CLOCK_SIDE,
         MEMORY, INPUTS, SHORTCUTS, SWITCH, BACKGROUND, DIM, BLUR, ROTATE, LOCK};
 
     /** Folder of wallpapers, next to home.conf, that Background › Image file rotates through. */

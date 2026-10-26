@@ -56,9 +56,11 @@ Undo: `./launcher/install.sh --undo` gives HOME back to Amazon's launcher.
 | Tiles | small, medium, large |
 | Layout | rows, or a grid that wraps to as many columns as fit |
 | Grid columns | by tile size, or 3, 4, 5: 16:9 cards sized so exactly that many fill the width |
+| Fit to one screen | off, on (grid with a column count): cards as large as fit with every app, the clock and the quick settings row on one screen, no scrolling. The clock and date share one line, and the focused app's name shows in the gap under its card |
 | Focus style | outline (an accent ring), or lift and glow: the card rises, grows and glows in the accent color, with rounder corners |
 | App order | your order, or recently used: the apps row re-sorts on each return home, newest first. It counts apps opened from dumbtv home, plus apps opened any other way (voice, another app) on Fire OS 6, where the launcher already has usage access. Apps never opened keep your order after the rest |
 | App names | on focus, always, never |
+| Row titles | shown, hidden: the small APPS and INPUTS headings |
 | Clock | system, 24-hour, 12-hour |
 | Clock position | left (with the Options and Settings buttons right of it), right |
 | Memory meter | hidden, shown: free memory under the date, with a bar of what is in use; amber, with "running low", when Android reports low memory or under 15% is free. It only shows the numbers: it closes and frees nothing, and needs no permission |
@@ -145,6 +147,10 @@ rotate=off
 lock=off
 # auto 3 4 5 (grid layout only)
 columns=auto
+# off on (grid with a column count)
+fit=off
+# on off
+titles=on
 # ring glow
 focus=ring
 # left right

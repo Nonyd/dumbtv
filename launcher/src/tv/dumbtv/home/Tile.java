@@ -26,7 +26,7 @@ final class Tile extends View {
     final Item item;
     final String kind;
     private final CharSequence title;
-    private final int cardW, cardH, labelH;
+    private final int cardW, cardH, labelH, labelRoom;
     private final boolean labelAlways, labelOnFocus, glow;
     private final float radius, stroke, lift;
     private final RectF card = new RectF();
@@ -42,7 +42,7 @@ final class Tile extends View {
     private boolean moving;
 
     Tile(Context c, Item item, String kind, CharSequence title, int cardW, int cardH,
-            String labels, int accent, boolean glow) {
+            String labels, int accent, boolean glow, boolean nameInGap) {
         super(c);
         this.item = item;
         this.kind = kind;
@@ -51,7 +51,9 @@ final class Tile extends View {
         this.cardH = cardH;
         this.glow = glow;
         boolean app = Catalog.APPS.equals(kind);
-        labelH = app ? Ui.dp(c, glow ? 32 : 26) : 0;
+        // With nameInGap the name is drawn past the bottom edge, in the row gap the grid leaves for it.
+        labelRoom = app ? Ui.dp(c, glow ? 32 : 26) : 0;
+        labelH = nameInGap ? 0 : labelRoom;
         labelAlways = "always".equals(labels);
         labelOnFocus = "focus".equals(labels);
         radius = glow ? Math.max(Ui.dp(c, 12), cardW / 14f) : Ui.dp(c, 10);
@@ -157,8 +159,8 @@ final class Tile extends View {
         }
         if (moving) drawArrows(canvas);
         boolean label = banner != null && (labelAlways || labelOnFocus && isFocused());
-        if (labelH > 0 && label) {
-            drawLine(canvas, under, cardW / 2f, cardH + labelH - Ui.dp(getContext(), 6));
+        if (labelRoom > 0 && label) {
+            drawLine(canvas, under, cardW / 2f, cardH + labelRoom - Ui.dp(getContext(), 6));
         }
     }
 
