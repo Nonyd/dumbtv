@@ -1,0 +1,86 @@
+# Packages Phase 2 disables with `pm disable-user --user 0`. Never uninstalled.
+# restore.sh / restore.ps1 read this file and re-enable every package in it.
+# One package per line; everything after '#' is a comment. "## batch N" lines are headers.
+# Device: Fire TV Stick 4K Max 2nd gen (AFTKRT), Fire OS 8.1.8.5 (RS8185.3891N).
+
+## batch 1 — viewing tracking
+com.amazon.tv.acr                                   # Automatic Content Recognition: identifies what's on screen
+com.amazon.hedwig                                   # Fire TV Channels + watch-time / engagement tracking
+com.amazon.tv.developer.dataservice                 # shares your viewing data with third-party apps for "personalization"
+com.amazon.ftvspatial                               # presence / indoor-location sensing
+com.amazon.hybridadidservice                        # advertising ID that follows you across apps
+
+## batch 2 — ads
+com.amazon.kso.blackbird                            # home-screen ad bidding and ad web views
+com.amazon.sneakpeek                                # autoplaying sponsored "Sneak Peek" previews
+com.amazon.privacypassservice                       # ad-token service
+com.amazon.systemnotices                            # Amazon promotional notices
+com.amazon.tv.website_launcher                      # opens promotional web pages
+
+## batch 3 — sponsored rows (alone; check Home paints after it)
+com.amazon.media.recommendations                    # sponsored/recommended rows, promo notifications, "sale" provider
+
+## batch 4 — shopping and upsell
+com.amazon.shoptv.client                            # Amazon Shopping on TV
+com.amazon.shoptv.firetv.client                     # "Amazon Live Shopping" tile
+com.amazon.tv.easyupgrade                           # "Upgrade your Fire TV" promos / device migration
+com.amazon.tv.earlyaccess                           # early-access program stub
+com.amazon.uxnotification                           # promotional UX popups
+
+## batch 5 — promos + telemetry
+com.amazon.tv.ftvambient                            # "Ambient Experience" (the plain screensaver is separate and stays)
+com.amazon.tv.releasenotes                          # "What's new" popups
+com.amazon.client.metrics.api                       # metrics API used to report usage
+com.amazon.device.telemetry.emitter                 # telemetry emitter
+com.amazon.ceviche                                  # analytics pipeline that uploads tracked events
+
+## batch 6 — logging
+com.amazon.dp.logger                                # device logger
+com.amazon.perfc                                    # performance data collection
+com.amazon.perfcollection                           # performance data collection service
+com.amazon.neo.minerva                              # metrics upload
+com.amazon.neo.minerva.logcat                       # uploads system logs
+
+## batch 7 — telemetry + experiments
+com.amazon.wirelessmetrics.service                  # reports wireless statistics (not the Wi-Fi itself)
+com.amazon.livedeviceservice                        # device "shadow" state reporting to Amazon
+com.amazon.ale                                      # A/B experiments framework
+com.amazon.device_remote_config_sync_service        # downloads remote config / experiment flags
+com.android.traceur                                 # system tracing tool
+
+## batch 8 — empty placeholder apps
+com.amazon.dummy.alarmclock                         # empty placeholder
+com.amazon.dummy.calendar                           # empty placeholder
+com.amazon.dummy.contacts                           # empty placeholder
+com.amazon.dummy.gallery                            # empty placeholder
+com.amazon.dummy.music                              # empty placeholder
+
+## batch 9 — tutorials + unused Amazon apps
+com.amazon.tmm.tutorial                             # remote / headphone tutorial screens
+com.amazon.minitv.android.app                       # miniTV stub
+com.amazon.gamehub                                  # Amazon Luna / Game Hub
+com.amazon.bueller.photos                           # Amazon Photos
+com.amazon.bueller.music                            # Amazon Music
+
+## batch 10 — Kids + Live tab
+com.amazon.tahoe                                    # Amazon Kids (FreeTime) profiles
+com.amazon.tv.livetv                                # Live tab and channel guide
+com.amazon.franktvinput                             # live-TV input that feeds the Live tab
+
+## batch 11 — Alexa overlays + Alexa media
+com.amazon.tv.alexaalerts                           # Alexa alarm / timer / reminder overlays
+com.amazon.tv.alexanotifications                    # Alexa notification overlays
+com.amazon.alexa.externalmediaplayer.fireos         # lets Alexa play music through apps
+com.amazon.alexamediaplayer.runtime.ftv             # Alexa's own media player
+com.amazon.spotify.mediabrowserservice              # lets Alexa control Spotify (Spotify app unaffected)
+
+## batch 12 — Alexa skills / calling / smart home
+com.amazon.aiondec                                  # Alexa skill connections
+com.amazon.firetv.androidskillconnectioncapability  # Alexa skill / Alexa+ events
+com.amazon.rtcsessioncontroller                     # Alexa calling / Drop In
+com.amazon.smarthomemapviewapp                      # smart-home dashboard (cameras, lights)
+com.amazon.tv.mattercohost                          # Matter smart-home controller (Matter casting stays)
+
+## batch 13 — Echo link + Wi-Fi password upload
+com.amazon.ods.kindleconnect                        # "Show on Fire TV" from an Echo / Fire tablet
+com.amazon.wifilocker                               # uploads saved Wi-Fi passwords to Amazon (Wi-Fi itself unaffected)

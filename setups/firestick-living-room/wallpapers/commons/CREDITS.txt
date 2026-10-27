@@ -1,0 +1,112 @@
+﻿Wallpapers for the living-room Fire TV Stick (dumbtv home, appletv build).
+Downloaded 2026-10-27 from Wikimedia Commons featured pictures, resized by Wikimedia to 1920 px wide.
+Each image keeps its own license; CC BY / CC BY-SA require crediting the author as below.
+
+01-1-lake-louise-pano-2019.jpg
+  Title:   1 lake louise pano 2019.jpg
+  Author:  Chensiyuan
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:1_lake_louise_pano_2019.jpg
+
+02-evening-on-kathleen-lake.jpg
+  Title:   Evening on Kathleen Lake.jpg
+  Author:  Jakub Fryš
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Evening_on_Kathleen_Lake.jpg
+
+03-foggy-reflections-loch-tummel.jpg
+  Title:   Foggy Reflections - Loch Tummel.jpg
+  Author:  Eric Kilby
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Foggy_Reflections_-_Loch_Tummel.jpg
+
+04-eilean-donan-castle-scotland-jan-2011.jpg
+  Title:   Eilean Donan Castle, Scotland - Jan 2011.jpg
+  Author:  Diliff
+  License: CC BY-SA 3.0
+  Source:  https://commons.wikimedia.org/wiki/File:Eilean_Donan_Castle,_Scotland_-_Jan_2011.jpg
+
+05-brei-amerkurj-kull-glacier-iceland-20240719-1427.jpg
+  Title:   Breiðamerkurjökull glacier, Iceland, 20240719 1427 2618.jpg
+  Author:  Jakub Hałun
+  License: CC BY 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Brei%C3%B0amerkurj%C3%B6kull_glacier,_Iceland,_20240719_1427_2618.jpg
+
+06-afternoon-at-tennfjorden-raftsundet-hinn-ya-norw.jpg
+  Title:   Afternoon at Tennfjorden, Raftsundet, Hinnøya, Norway, 2015 September (02).jpg
+  Author:  Ximonic (Simo Räsänen)
+  License: CC BY-SA 3.0
+  Source:  https://commons.wikimedia.org/wiki/File:Afternoon_at_Tennfjorden,_Raftsundet,_Hinn%C3%B8ya,_Norway,_2015_September_(02).jpg
+
+07-flatirons-sunrise.jpg
+  Title:   Flatirons Sunrise.jpg
+  Author:  Tyler Cipriani
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Flatirons_Sunrise.jpg
+
+08-aurora-amaz-nica-no-lago-do-cuni.jpg
+  Title:   Aurora amazônica no Lago do Cuniã.jpg
+  Author:  RodrigoErse
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Aurora_amaz%C3%B4nica_no_Lago_do_Cuni%C3%A3.jpg
+
+09-2017-04-circumpolar-trails-sunset-at-la-hague-li.jpg
+  Title:   2017-04 Circumpolar trails sunset at La Hague lighthouse.jpg
+  Author:  Antoine Lamielle
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:2017-04_Circumpolar_trails_sunset_at_La_Hague_lighthouse.jpg
+
+10-eso-the-carina-nebula-by.jpg
+  Title:   ESO - The Carina Nebula (by).jpg
+  Author:  ESO/IDA/Danish 1.5 m/R.Gendler, J-E. Ova
+  License: CC BY 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:ESO_-_The_Carina_Nebula_(by).jpg
+
+11-emission-nebulae-in-cepheus-and-cassiopeia.jpg
+  Title:   Emission nebulae in Cepheus and Cassiopeia.jpg
+  Author:  Tk833
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Emission_nebulae_in_Cepheus_and_Cassiopeia.jpg
+
+12-mount-shasta-lake-siskiyou-sw-view.jpg
+  Title:   Mount Shasta, Lake Siskiyou, SW view.jpg
+  Author:  Radomianin
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Mount_Shasta,_Lake_Siskiyou,_SW_view.jpg
+
+13-mountain-view-in-robson-valley.jpg
+  Title:   Mountain view in Robson valley.jpg
+  Author:  Jakub Fryš (talk · contribs)
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Mountain_view_in_Robson_valley.jpg
+
+14-alone-in-the-unspoilt-wilderness-unsplash.jpg
+  Title:   Alone in the unspoilt wilderness (Unsplash).jpg
+  Author:  David Marcu davidmarcu
+  License: CC0
+  Source:  https://commons.wikimedia.org/wiki/File:Alone_in_the_unspoilt_wilderness_(Unsplash).jpg
+
+15-beech-and-ferns-in-gullmarsskogen.jpg
+  Title:   Beech and ferns in Gullmarsskogen.jpg
+  Author:  W.carter
+  License: CC0
+  Source:  https://commons.wikimedia.org/wiki/File:Beech_and_ferns_in_Gullmarsskogen.jpg
+
+16-messier83-heic1403a.jpg
+  Title:   Messier83 - Heic1403a.jpg
+  Author:  Credit: NASA, ESA, and the Hubble Herita
+  License: Public domain
+  Source:  https://commons.wikimedia.org/wiki/File:Messier83_-_Heic1403a.jpg
+
+17-breathtaking-beauty-of-dzukou-valley-in-manipur.jpg
+  Title:   Breathtaking beauty of Dzukou Valley in Manipur-Nagaland border (edit).jpg
+  Author:  Original:  Samudra Bikash Hazarika
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:Breathtaking_beauty_of_Dzukou_Valley_in_Manipur-Nagaland_border_(edit).jpg
+
+18-2019-parc-national-des-pyrenees-vall-e-de-gavarn.jpg
+  Title:   2019 - Parc national des Pyrenees - Vallée de Gavarnie.jpg
+  Author:  Moahim
+  License: CC BY-SA 4.0
+  Source:  https://commons.wikimedia.org/wiki/File:2019_-_Parc_national_des_Pyrenees_-_Vall%C3%A9e_de_Gavarnie.jpg
+
