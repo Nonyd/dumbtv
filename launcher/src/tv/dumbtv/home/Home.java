@@ -62,6 +62,10 @@ public final class Home extends Activity {
     private final List<TextView> quickChips = new ArrayList<>();
     private Config cfg;
     private LinearLayout column, head, when, quick;
+    private Slideshow slideshow;
+    private boolean swallowKeyUp;
+    private final Runnable idleStart = this::startSlideshow;
+    private final Runnable letSleep = () -> getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     private TvInputManager tv;
     private int applied = -1, appsGeneration;
     private boolean resumed, landed, unlockOpened;
@@ -238,6 +242,42 @@ public final class Home extends Activity {
         f.addAction(Intent.ACTION_TIMEZONE_CHANGED);
         registerReceiver(time, f);
         tick();
+        armIdle();
+    }
+
+    /** (Re)starts the countdown to Options › Photo slideshow after; any key press calls it. */
+    private void armIdle() {
+        ui.removeCallbacks(idleStart);
+        String minutes = cfg.get(Config.IDLE);
+        if (resumed && !"off".equals(minutes)) ui.postDelayed(idleStart, Long.parseLong(minutes) * 60_000L);
+    }
+
+    /**
+     * Fire OS 8 runs no third-party screensaver (see {@link Saver}), so the home screen shows the
+     * photos itself. The screen is kept on for the rest of the device's sleep time, then let go so the
+     * device sleeps when it would have anyway; nothing extends how long the TV stays awake.
+     */
+    private void startSlideshow() {
+        if (!resumed || moving != null || slideshow.getVisibility() == View.VISIBLE) return;
+        slideshow.setAlpha(0f);
+        slideshow.setVisibility(View.VISIBLE);
+        slideshow.animate().alpha(1f).setDuration(1500).start();
+        slideshow.start();
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        long sleep = Settings.Secure.getLong(getContentResolver(), "sleep_timeout", 20 * 60_000L);
+        if (sleep > 0) {
+            long idle = Long.parseLong(cfg.get(Config.IDLE)) * 60_000L;
+            ui.postDelayed(letSleep, Math.max(60_000L, sleep - idle));
+        }
+    }
+
+    private void stopSlideshow() {
+        ui.removeCallbacks(letSleep);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (slideshow.getVisibility() != View.VISIBLE) return;
+        slideshow.animate().cancel();
+        slideshow.stop();
+        slideshow.setVisibility(View.GONE);
     }
 
     @Override
@@ -249,6 +289,8 @@ public final class Home extends Activity {
     protected void onPause() {
         super.onPause();
         resumed = false;
+        ui.removeCallbacks(idleStart);
+        stopSlideshow();
         stopColorAnimation();
         targetColor = 0;
         unregisterReceiver(time);
@@ -284,6 +326,8 @@ public final class Home extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        stopSlideshow();
+        armIdle();
         if (moving != null) stopMoving();
         if (resumed) focusFirst();
     }
@@ -295,6 +339,18 @@ public final class Home extends Activity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
+        // Over the slideshow, a press only brings the home screen back; its key-up is eaten too.
+        if (slideshow.getVisibility() == View.VISIBLE && e.getAction() == KeyEvent.ACTION_DOWN) {
+            stopSlideshow();
+            armIdle();
+            swallowKeyUp = true;
+            return true;
+        }
+        if (swallowKeyUp && e.getAction() == KeyEvent.ACTION_UP) {
+            swallowKeyUp = false;
+            return true;
+        }
+        armIdle();
         if (moving == null) return super.dispatchKeyEvent(e);
         if (e.getAction() == KeyEvent.ACTION_DOWN) {
             switch (e.getKeyCode()) {
@@ -514,6 +570,10 @@ public final class Home extends Activity {
 
         apps = new Row(Catalog.APPS, "Apps", column);
         inputs = new Row(Catalog.INPUTS, "Inputs", column);
+
+        slideshow = new Slideshow(this);
+        slideshow.setVisibility(View.GONE);
+        root.addView(slideshow, new FrameLayout.LayoutParams(MATCH, MATCH));
 
         quick = new LinearLayout(this);
         quick.setGravity(Gravity.CENTER_HORIZONTAL);

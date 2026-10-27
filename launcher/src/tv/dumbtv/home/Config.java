@@ -141,8 +141,16 @@ final class Config {
             new String[] {"15", "30", "60", "120"},
             new String[] {"15 seconds", "30 seconds", "1 minute", "2 minutes"});
 
+    /**
+     * Minutes of no input on the home screen before the photo slideshow starts. Must be shorter than
+     * the device's screen timeout (5 minutes on a Fire TV Stick), or the device sleeps first.
+     */
+    static final Choice IDLE = new Choice("idle", "Photo slideshow after", "off",
+            new String[] {"off", "1", "2", "3", "4"},
+            new String[] {"Off", "1 minute", "2 minutes", "3 minutes", "4 minutes"});
+
     static final Choice[] CHOICES = {ACCENT, TILES, LAYOUT, COLUMNS, FIT, FOCUS, ORDER, LABELS, TITLES, CLOCK, CLOCK_SIDE,
-        MEMORY, INPUTS, SHORTCUTS, SWITCH, BACKGROUND, DIM, BLUR, ROTATE, SAVER, LOCK};
+        MEMORY, INPUTS, SHORTCUTS, SWITCH, BACKGROUND, DIM, BLUR, ROTATE, IDLE, SAVER, LOCK};
 
     /** Folder of wallpapers, next to home.conf, that Background › Image file rotates through. */
     static final String WALLPAPERS = "wallpapers";

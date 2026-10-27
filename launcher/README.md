@@ -69,7 +69,8 @@ Undo: `./launcher/install.sh --undo` gives HOME back to Amazon's launcher.
 | Open inputs with | Automatic, the TV's app, dumbtv home (see below) |
 | Background | black, graphite, midnight, image, adaptive, adaptive tint |
 | Image dim, image blur, wallpaper rotation | for image backgrounds; blur (off, soft, strong) is applied once per wallpaper |
-| Screensaver photo time | 15 s, 30 s, 1 min, 2 min: how long each photo stays up in the dumbtv photos screensaver (below) |
+| Photo slideshow after | off, 1–4 minutes of no input on the home screen: the wallpaper photos, full screen and unblurred (below) |
+| Screensaver photo time | 15 s, 30 s, 1 min, 2 min: how long each photo stays up in the slideshow |
 | Child lock | off, on: hides Options and Settings and turns off Hold OK and ☰ Menu on tiles, so the home screen only opens apps and inputs (see below) |
 
 Below them: Next wallpaper, which apps and inputs appear on the home screen, a
@@ -94,21 +95,30 @@ without a TV banner, like the Appstore, start hidden; tick them to add them.
   is connected. Back returns to the home screen, and HOME releases the input at
   once. Nothing new is requested to do this.
 
-## Screensaver
+## Photo slideshow and screensaver
 
-The APK also carries a screensaver, **dumbtv photos** (`tv.dumbtv.home/.Saver`): the
-same wallpaper photos, full screen and unblurred, cross-fading every **Screensaver
-photo time**, with a small clock at the bottom right. Like the home screen it reads only
-its own folders: no permission, no network. Fire OS uses Android's screensaver setting,
-so it is switched on and off over adb:
+**Options › Photo slideshow after** fades the home screen into the wallpaper photos
+after that many idle minutes: full screen, unblurred, shuffled, cross-fading every
+**Screensaver photo time**, with a small clock at the bottom right. The first key press
+only brings the home screen back. While it shows, the screen is kept on until the
+device's own sleep time (`settings get secure sleep_timeout`) and then let go, so the TV
+sleeps when it would have anyway. Pick a time shorter than the screen timeout
+(`settings get system screen_off_timeout`, 5 minutes on a Fire TV Stick), or the device
+sleeps first. It reads only the launcher's own folders: no permission, no network.
+
+The same slideshow ships as an Android screensaver, **dumbtv photos**
+(`tv.dumbtv.home/.Saver`), for TVs that run third-party screensavers:
 
 ```
 adb shell settings put secure screensaver_components tv.dumbtv.home/.Saver
-adb shell settings put secure screensaver_components com.amazon.ftv.screensaver/.app.services.ScreensaverService
 ```
 
-It starts after the screen timeout (`settings get system screen_off_timeout`, 5 minutes
-on a Fire TV Stick 4K Max).
+Fire OS 8 does not. At the screen timeout its AmbientManagerService looks for an
+`AmbientService`, which only Amazon's `com.amazon.tv.ftvambient` (Ambient Experience)
+provides; with that package disabled (cleanyourtv's Fire OS 8 list disables it; dumbtv's
+`data/fireos/packages.txt` does not), Fire OS starts no
+screensaver at all, Amazon's included, and simply sleeps. Use the home-screen slideshow
+there.
 
 ## Child lock
 
