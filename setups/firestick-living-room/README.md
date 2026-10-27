@@ -1,5 +1,5 @@
 > In this repository the setup lives in `setups/firestick-living-room/`; `dumbtv\` below means the repository root (`../..`).
-> `backup/`, `log/` and the wallpaper images are kept only on the PC: they hold device identifiers, and the photos can be re-downloaded from the links in `wallpapers/commons/CREDITS.txt`.
+> `backup/`, `log/`, `tmdb.key` and the wallpaper images are kept only on the PC: they hold device identifiers or a private key, and the photos can be re-downloaded from the links in `wallpapers/commons/CREDITS.txt`.
 
 # Living-room Fire TV Stick: what was changed, and how to change it back
 
@@ -102,6 +102,34 @@ Then press **Home** on the remote. Changes appear right away.
 
 Many settings can also be changed on the TV: press **☰ (Menu)** on any app card and choose **Options**.
 
+### The top shelf (movie pictures) and switching back to the grid
+
+The home screen now uses the **top shelf** look: a big picture across the top, your apps in one
+row, and the background taking a dark shade of the highlighted app's colour. With a TMDB key in
+place, the picture shows what's popular on the highlighted app in Nigeria (Netflix, Prime Video,
+Disney+, Max, Tubi, Pluto TV), or "Trending this week" for the others. Without the key, or without
+internet, it shows your wallpaper photos.
+
+**Adding or changing the TMDB key** (from themoviedb.org → Settings → API, the short "API Key"):
+1. In this folder, create a text file named `tmdb.key` (Notepad: Save as type "All files") with the
+   key as its only line.
+2. From PowerShell in this folder:
+
+   ```
+   adb push tmdb.key /sdcard/Android/media/tv.dumbtv.home/tmdb.key
+   ```
+
+3. Press Home. The pictures switch over within a few seconds.
+
+Keep `tmdb.key` out of anything you share; it is deliberately not in `home.conf`.
+
+**Back to the 3 × 3 grid look:** `adb push home-grid.conf /sdcard/Android/media/tv.dumbtv.home/home.conf`,
+then press Home. To return to the top shelf, push `home.conf` the same way.
+
+The top shelf only gets movie pictures from the **net build** of the home screen, which is allowed to
+contact TMDB (and nothing else). The offline build has no internet permission at all; it shows
+the top shelf with your photos.
+
 ### Add, remove or reorder app tiles
 
 The `apps.only=` line lists exactly which apps appear, in order, separated by commas:
@@ -170,11 +198,12 @@ tools are already installed on this computer (Java 17 and the Android SDK in `C:
 
    ```
    cd dumbtv\launcher
-   .\build.ps1
+   .\build.ps1 -Net
    ```
 
-   It ends with `built build\dumbtv-home.apk`. It must say `3 uses-permission entries`
-   (those three only apply to old Fire OS 6; on this Stick the app has no permissions at all).
+   It ends with `built build\dumbtv-home.apk (net)` and `4 uses-permission entries`: internet (for
+   TMDB) plus three that only apply to old Fire OS 6. Leave out `-Net` for the offline build:
+   `3 uses-permission entries`, no internet at all, photos in the top shelf.
 3. Install it on the Stick, from Git Bash in this folder:
 
    ```
