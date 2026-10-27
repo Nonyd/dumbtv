@@ -64,6 +64,7 @@ public final class Home extends Activity {
     private LinearLayout column, head, when, quick;
     private Slideshow slideshow;
     private Hero hero;
+    private Film film;
     private Shelf feed;
     private View shelfGap;
     private boolean swallowKeyUp;
@@ -246,7 +247,9 @@ public final class Home extends Activity {
         registerReceiver(time, f);
         tick();
         armIdle();
-        if (shelf()) {
+        if (showFilm()) {
+            film.play();
+        } else if (shelf()) {
             feed.resume();
             feed.recheck();
         }
@@ -270,6 +273,7 @@ public final class Home extends Activity {
         slideshow.setVisibility(View.VISIBLE);
         slideshow.animate().alpha(1f).setDuration(1500).start();
         slideshow.start();
+        film.stop();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         long sleep = Settings.Secure.getLong(getContentResolver(), "sleep_timeout", 20 * 60_000L);
         if (sleep > 0) {
@@ -285,6 +289,7 @@ public final class Home extends Activity {
         slideshow.animate().cancel();
         slideshow.stop();
         slideshow.setVisibility(View.GONE);
+        if (resumed && filming()) film.play();
     }
 
     @Override
@@ -299,6 +304,7 @@ public final class Home extends Activity {
         ui.removeCallbacks(idleStart);
         stopSlideshow();
         feed.pause();
+        film.stop();
         stopColorAnimation();
         targetColor = 0;
         unregisterReceiver(time);
@@ -504,6 +510,9 @@ public final class Home extends Activity {
         int heroHeight = Math.round(getResources().getDisplayMetrics().heightPixels * 0.68f);
         root.addView(hero, new FrameLayout.LayoutParams(MATCH, heroHeight, Gravity.TOP));
         feed = new Shelf(this, hero);
+        film = new Film(this);
+        film.setVisibility(View.GONE);
+        root.addView(film, new FrameLayout.LayoutParams(MATCH, heroHeight, Gravity.TOP));
 
         ScrollView scroll = new ScrollView(this) {
             /** Scrolls in whole rows: the focused row shows complete, and a row starts at the top edge. */
@@ -751,7 +760,7 @@ public final class Home extends Activity {
             row.grid.setColumns(fixed);
         }
         // Top shelf: the picture across the top, the one-row strip moved under it with narrow edges.
-        hero.setVisibility(shelf ? View.VISIBLE : View.GONE);
+        showFilm();
         apps.scroll.setPadding(dp(shelf ? 16 : 42), 0, dp(shelf ? 16 : 42), 0);
         int gap = 0;
         if (shelf) {
@@ -761,7 +770,7 @@ public final class Home extends Activity {
         }
         shelfGap.getLayoutParams().height = gap;
         shelfGap.requestLayout();
-        if (!shelf) feed.pause();
+        if (!shelf || filming()) feed.pause();
         meter.setVisibility("on".equals(cfg.get(Config.MEMORY)) ? View.VISIBLE : View.GONE);
         meter.setAccent(accent);
         render(apps);
@@ -924,6 +933,7 @@ public final class Home extends Activity {
 
     private void setAdaptiveColor(int color) {
         displayedColor = color;
+        film.tint(color);
         if ("adaptive-tint".equals(backgroundMode)) tint.setBackgroundColor(color);
         else root.setBackgroundColor(color);
     }
@@ -946,8 +956,25 @@ public final class Home extends Activity {
         return "shelf".equals(cfg.get(Config.LAYOUT));
     }
 
+    /**
+     * Top shelf with a film pushed next to home.conf: the film takes the place of the pictures.
+     * Checked on every return home, so a film pushed or removed shows up without a restart.
+     */
+    private boolean showFilm() {
+        boolean shelf = shelf(), on = shelf && film.available();
+        film.setVisibility(on ? View.VISIBLE : View.GONE);
+        hero.setVisibility(shelf && !on ? View.VISIBLE : View.GONE);
+        if (on) feed.pause();
+        return on;
+    }
+
+    private boolean filming() {
+        return film.getVisibility() == View.VISIBLE;
+    }
+
     /** Points the top shelf at the focused app ({@code pkg}), or at "trending" for anything else. */
     private void shelfFor(String pkg, CharSequence label) {
+        if (filming()) return;
         feed.focus(pkg, label);
         if (resumed) feed.resume();
     }

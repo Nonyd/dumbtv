@@ -76,8 +76,20 @@ else
   fail "Fire OS did not bind the Guard; run ./restore.sh --launcher-only"
 fi
 
+echo "[5b] sleep time: screen off after ${SCREEN_OFF_MS:=1800000} ms, sleep after ${SLEEP_MS:=2700000} ms"
+# The first run records the Stick's own values; the undo puts them back (restore.sh / restore.ps1).
+if [[ ! -f backup/sleep-before.txt ]]; then
+  { echo "# captured $(date) before the sleep-time change"
+    echo "screen_off_timeout=$(q settings get system screen_off_timeout)"
+    echo "sleep_timeout=$(q settings get secure sleep_timeout)"
+  } > backup/sleep-before.txt
+fi
+sed -n '2,3p' backup/sleep-before.txt
+run settings put system screen_off_timeout "$SCREEN_OFF_MS"
+run settings put secure sleep_timeout "$SLEEP_MS"
+
 # No system screensaver change: Fire OS 8 runs none while Amazon's Ambient service is disabled
-# (Phase 2), so the home screen shows the photo slideshow itself (home.conf idle=3).
+# (Phase 2), so the home screen shows the photo slideshow itself (home.conf idle=15).
 
 echo "[6] open it"
 q am start -W -n $PKG/.Home | grep -E 'Status|TotalTime'

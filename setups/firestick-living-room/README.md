@@ -1,6 +1,3 @@
-> In this repository the setup lives in `setups/firestick-living-room/`; `dumbtv\` below means the repository root (`../..`).
-> `backup/`, `log/`, `tmdb.key` and the wallpaper images are kept only on the PC: they hold device identifiers or a private key, and the photos can be re-downloaded from the links in `wallpapers/commons/CREDITS.txt`.
-
 # Living-room Fire TV Stick: what was changed, and how to change it back
 
 This folder is the record of everything done to the **Fire TV Stick 4K Max** in the living room
@@ -11,7 +8,12 @@ In short:
   track what you watch, send usage data, or that you said you never use.
 - **The home screen was replaced** with a clean, Apple TV-style one: your 9 apps as big rounded cards,
   a blurred photo in the background, the clock top right, and Settings/Bluetooth buttons at the bottom.
-- **After 3 minutes of not touching the remote**, the home screen turns into a photo slideshow.
+- **Your film, "You are for Me"**, plays across the top of the home screen with its song, fading in
+  every time you come home and stopping the moment an app opens.
+- **After 15 minutes of not touching the remote**, the home screen turns into a slideshow of the newest
+  films on each streaming service (your photos when there's no internet).
+- **Sleep time:** the screen turns off after 30 minutes without the remote, and the Stick sleeps after 45
+  (it was 5 and 21). The undo puts the old times back.
 
 Nothing was uninstalled from Amazon, nothing touches your Amazon account, and **everything can be
 undone** with one command (see "Undo everything" below).
@@ -64,7 +66,7 @@ On a Mac or Linux computer, open a terminal here and run `./restore.sh` instead.
 
 ### Undo only the new home screen
 
-Keeps the ad and tracking cleanup, brings back Amazon's home screen:
+Keeps the ad and tracking cleanup, brings back Amazon's home screen and the old screen and sleep times:
 
 ```
 .\restore.ps1 -LauncherOnly
@@ -101,6 +103,23 @@ adb push home.conf /sdcard/Android/media/tv.dumbtv.home/home.conf
 Then press **Home** on the remote. Changes appear right away.
 
 Many settings can also be changed on the TV: press **☰ (Menu)** on any app card and choose **Options**.
+
+### Your film in the top shelf
+
+`film.mp4` in the home screen's media folder plays across the top, looping, in place of the movie
+pictures. Its sound:
+- fades in over about 2 seconds to 40 % every time the home screen appears;
+- stops at once when an app opens, when the slideshow starts, or when the screen sleeps;
+- stays silent if other music is already playing, and goes quiet while you use voice search (or
+  anything else that needs the speakers), coming back afterwards.
+
+Change it in `home.conf`: `film.volume=40` (0 to 100), `film.title=You are for Me` (the caption).
+
+- **Replace the film:** `adb push film.mp4 /sdcard/Android/media/tv.dumbtv.home/film.mp4`, then press Home.
+- **Remove it** (back to the movie pictures): `adb shell rm /sdcard/Android/media/tv.dumbtv.home/film.mp4`,
+  then press Home.
+
+The film is only on this PC (`brag-output/`) and the Stick; it is never put on GitHub.
 
 ### The top shelf (movie pictures) and switching back to the grid
 
@@ -165,10 +184,16 @@ With 9 apps the cards are sized so everything fits on one screen. More apps make
 | `dim=` | 0, 20, 40, 60, 80 (percent darker) | 60 |
 | `blur=` | off, soft, strong | strong |
 | `rotate=` | off, visit (every return home), hourly, daily, daytime | hourly |
-| `idle=` | off, 1, 2, 3, 4 (minutes before the slideshow) | 3 |
-| `saver=` | 15, 30, 60, 120 (seconds per slideshow photo) | 30 |
+| `idle=` | off, 1, 2, 3, 4, 10, 15, 20 (minutes before the slideshow) | 15 |
+| `saver=` | 15, 30, 60, 120 (seconds per slideshow picture) | 30 |
 
-Keep `idle=` under 5: the Stick goes to sleep after 5 minutes without the remote.
+With a TMDB key the slideshow shows the newest films (the last 6 months) on Netflix, Prime Video,
+Disney+, Max, Tubi and Pluto TV, taking turns, each captioned "New on …". Without one it shows your photos.
+
+Keep `idle=` shorter than the screen timeout. `launcher-install.sh` sets that to 30 minutes and the
+sleep time to 45, and saves the old values in `backup/sleep-before.txt` for the undo. To change the
+sleep time yourself: Settings › Display & Sounds › Screensaver / Sleep on the Stick, or rerun the
+install with `SCREEN_OFF_MS=… SLEEP_MS=… ./launcher-install.sh`.
 
 ### Add or remove wallpaper photos
 

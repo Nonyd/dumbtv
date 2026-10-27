@@ -106,6 +106,21 @@ if ($saver.StartsWith("tv.dumbtv.home/")) {
     Write-Host "  ok       screensaver is not ours"
 }
 
+# The sleep time set by launcher-install.sh: back to the values recorded before it, when still ours.
+$sleepBefore = Join-Path $Here "backup\sleep-before.txt"
+if (Test-Path $sleepBefore) {
+    foreach ($s in @(@("system", "screen_off_timeout", "1800000"), @("secure", "sleep_timeout", "2700000"))) {
+        $now = (Invoke-Shell @("settings", "get", $s[0], $s[1])) -join ""
+        $line = Get-Content $sleepBefore | Where-Object { $_ -match "^$($s[1])=" } | Select-Object -First 1
+        $was = "$line" -replace "^$($s[1])=", ""
+        if ($now -ne $s[2]) { Write-Host "  ok       $($s[1]) is not ours ($now)" }
+        elseif (-not $was -or $was -eq "null") { Invoke-OrSay @("settings", "delete", $s[0], $s[1]) }
+        else { Invoke-OrSay @("settings", "put", $s[0], $s[1], $was) }
+    }
+} else {
+    Write-Host "  ok       no sleep-time change recorded"
+}
+
 # The HOME takeover's alarm tweak: drop min_futurity=0 unless it was already there before we started,
 # keeping any other alarm_manager_constants entries.
 $alarm = (Invoke-Shell @("settings", "get", "global", "alarm_manager_constants")) -join ""

@@ -143,12 +143,12 @@ final class Config {
             new String[] {"15 seconds", "30 seconds", "1 minute", "2 minutes"});
 
     /**
-     * Minutes of no input on the home screen before the photo slideshow starts. Must be shorter than
-     * the device's screen timeout (5 minutes on a Fire TV Stick), or the device sleeps first.
+     * Minutes of no input on the home screen before the slideshow starts. Must be shorter than the
+     * device's screen timeout (5 minutes on a Fire TV Stick out of the box), or the device sleeps first.
      */
-    static final Choice IDLE = new Choice("idle", "Photo slideshow after", "off",
-            new String[] {"off", "1", "2", "3", "4"},
-            new String[] {"Off", "1 minute", "2 minutes", "3 minutes", "4 minutes"});
+    static final Choice IDLE = new Choice("idle", "Slideshow after", "off",
+            new String[] {"off", "1", "2", "3", "4", "10", "15", "20"},
+            new String[] {"Off", "1 minute", "2 minutes", "3 minutes", "4 minutes", "10 minutes", "15 minutes", "20 minutes"});
 
     static final Choice[] CHOICES = {ACCENT, TILES, LAYOUT, COLUMNS, FIT, FOCUS, ORDER, LABELS, TITLES, CLOCK, CLOCK_SIDE,
         MEMORY, INPUTS, SHORTCUTS, SWITCH, BACKGROUND, DIM, BLUR, ROTATE, IDLE, SAVER, LOCK};
@@ -211,6 +211,16 @@ final class Config {
             } catch (IOException ignored) {
                 // unreadable: treated as absent
             }
+        }
+        return null;
+    }
+
+    /** A file pushed next to the settings (the media folder first), such as the top shelf film; null when absent. */
+    File media(String name) {
+        for (File d : new File[] {shared, dir}) {
+            if (d == null) continue;
+            File f = new File(d, name);
+            if (f.isFile() && f.length() > 0) return f;
         }
         return null;
     }

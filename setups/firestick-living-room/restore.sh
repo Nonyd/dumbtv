@@ -87,6 +87,20 @@ else
   echo "  ok       screensaver is not ours"
 fi
 
+# The sleep time set by launcher-install.sh: back to the values recorded before it, when still ours.
+if [[ -f "$HERE/backup/sleep-before.txt" ]]; then
+  for pair in "system screen_off_timeout 1800000" "secure sleep_timeout 2700000"; do
+    read -r ns key ours <<<"$pair"
+    now=$(sh_adb settings get "$ns" "$key")
+    was=$(sed -n "s/^$key=//p" "$HERE/backup/sleep-before.txt" | tr -d '')
+    if [[ "$now" != "$ours" ]]; then echo "  ok       $key is not ours ($now)"
+    elif [[ -z "$was" || "$was" == null ]]; then do_or_say settings delete "$ns" "$key"
+    else do_or_say settings put "$ns" "$key" "$was"; fi
+  done
+else
+  echo "  ok       no sleep-time change recorded"
+fi
+
 # The HOME takeover's alarm tweak: drop min_futurity=0 unless it was already there before we started,
 # keeping any other alarm_manager_constants entries.
 alarm=$(sh_adb settings get global alarm_manager_constants); [[ "$alarm" == null ]] && alarm=""

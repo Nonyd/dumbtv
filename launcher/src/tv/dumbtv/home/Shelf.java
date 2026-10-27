@@ -24,7 +24,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -46,14 +51,26 @@ final class Shelf {
     private static final String API = "https://api.themoviedb.org/3/";
     private static final String IMAGES = "https://image.tmdb.org/t/p/w1280";
     private static final String TRENDING = "trending";
+    /** List-key prefix for a service's newest films (the slideshow's), as against its most popular. */
+    private static final String NEWEST = "new-";
+    /** How far back "newest" reaches, by release date. */
+    private static final long NEWEST_DAYS = 180;
     private static final long LIST_TTL_MS = 6 * 3_600_000L;
     private static final long HOLD_MS = 8_000;
     private static final long SETTLE_MS = 350;
     private static final int MAX_IMAGES = 80;
 
     /** TMDB watch-provider ids for the apps it knows, by package; several ids are OR-ed. */
-    private static final Map<String, String> PROVIDERS = new HashMap<>();
+    private static final Map<String, String> PROVIDERS = new LinkedHashMap<>();
+    /** The services' names, for the slideshow captions. */
+    private static final Map<String, String> SERVICES = new HashMap<>();
     static {
+        SERVICES.put("com.netflix.ninja", "Netflix");
+        SERVICES.put("com.amazon.firebat", "Prime Video");
+        SERVICES.put("com.disney.disneyplus", "Disney+");
+        SERVICES.put("com.hbo.hbonow", "Max");
+        SERVICES.put("com.tubitv.ott", "Tubi");
+        SERVICES.put("tv.pluto.android", "Pluto TV");
         PROVIDERS.put("com.netflix.ninja", "8");
         PROVIDERS.put("com.amazon.firebat", "9|119");
         PROVIDERS.put("com.disney.disneyplus", "337");
@@ -216,6 +233,71 @@ final class Shelf {
         }
     }
 
+    /** One slideshow picture: a TMDB backdrop with its title and service, or a wallpaper photo. */
+    static final class Slide {
+        final String backdrop, title, caption;
+        final File photo;
+
+        Slide(String backdrop, String title, String caption, File photo) {
+            this.backdrop = backdrop;
+            this.title = title;
+            this.caption = caption;
+            this.photo = photo;
+        }
+    }
+
+    /**
+     * For the idle slideshow: the newest films on every service TMDB knows, taking turns between the
+     * services; the wallpaper photos when offline or when TMDB has nothing. Blocking: call it off the
+     * main thread.
+     */
+    List<Slide> slides() {
+        List<List<Slide>> perService = new ArrayList<>();
+        if (online(context)) {
+            for (String pkg : PROVIDERS.keySet()) {
+                List<Slide> mine = new ArrayList<>();
+                try {
+                    for (Pick p : list(NEWEST + pkg)) {
+                        String where = p.region.equals(region()) ? "" : " in the US";
+                        mine.add(new Slide(p.backdrop, p.year.isEmpty() ? p.title : p.title + "  (" + p.year + ")",
+                                "New on " + SERVICES.get(pkg) + where, null));
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "newest on " + pkg + " failed: " + e);
+                }
+                if (!mine.isEmpty()) perService.add(mine);
+            }
+        }
+        List<Slide> out = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (int i = 0; ; i++) {
+            boolean any = false;
+            for (List<Slide> l : perService) {
+                if (i >= l.size()) continue;
+                any = true;
+                if (seen.add(l.get(i).backdrop)) out.add(l.get(i));
+            }
+            if (!any) break;
+        }
+        if (out.isEmpty()) {
+            for (File f : Config.get(context).wallpapers()) out.add(new Slide(null, "", "", f));
+            Collections.shuffle(out);
+        }
+        Log.i(TAG, "slideshow: " + out.size() + " slides from " + perService.size() + " services");
+        return out;
+    }
+
+    /** The picture for {@code s}, at about {@code w} by {@code h}; null when it cannot be had. Blocking. */
+    Bitmap picture(Slide s, int w, int h) {
+        if (s.photo != null) return Home.decode(s.photo, w, h);
+        try {
+            return backdrop(s.backdrop);
+        } catch (Exception e) {
+            Log.w(TAG, "backdrop " + s.backdrop + " failed: " + e);
+            return null;
+        }
+    }
+
     private String region() {
         String r = Config.get(context).get("tmdb.region", Locale.getDefault().getCountry());
         return r == null || r.isEmpty() ? "US" : r.toUpperCase(Locale.ROOT);
@@ -233,15 +315,17 @@ final class Shelf {
             String apiKey = URLEncoder.encode(Config.get(context).secret("tmdb.key"), "UTF-8");
             JSONArray merged = new JSONArray();
             String used = region;
+            boolean newest = key.startsWith(NEWEST);
+            String service = newest ? key.substring(NEWEST.length()) : key;
             if (TRENDING.equals(key)) {
                 append(merged, get(API + "trending/all/week?language=en-US&api_key=" + apiKey));
             } else {
-                discover(merged, key, region, apiKey);
+                discover(merged, service, region, apiKey, newest);
                 // Services not offered in tmdb.region (Disney+, Max, Tubi, Pluto TV in Nigeria, used
                 // through a VPN) have no list there: show the US one, and say so in the caption.
                 if (merged.length() == 0 && !"US".equals(region)) {
                     used = "US";
-                    discover(merged, key, used, apiKey);
+                    discover(merged, service, used, apiKey, newest);
                 }
             }
             body = new JSONObject().put("region", used).put("results", merged).toString();
@@ -265,13 +349,22 @@ final class Shelf {
         return out.size() > 20 ? new ArrayList<>(out.subList(0, 20)) : out;
     }
 
-    /** Popular movies, then TV, on {@code key}'s service in {@code region}. */
-    private static void discover(JSONArray into, String key, String region, String apiKey)
+    /**
+     * Popular movies, then TV, on {@code key}'s service in {@code region}; with {@code newest}, only
+     * the films released in the last {@link #NEWEST_DAYS} days, most popular first.
+     */
+    private static void discover(JSONArray into, String key, String region, String apiKey, boolean newest)
             throws IOException, org.json.JSONException {
         String providers = URLEncoder.encode(PROVIDERS.get(key), "UTF-8");
-        for (String type : new String[] {"movie", "tv"}) {
+        String since = "";
+        if (newest) {
+            SimpleDateFormat day = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
+            since = "&primary_release_date.gte=" + day.format(new Date(System.currentTimeMillis() - NEWEST_DAYS * 86_400_000L))
+                    + "&primary_release_date.lte=" + day.format(new Date());
+        }
+        for (String type : newest ? new String[] {"movie"} : new String[] {"movie", "tv"}) {
             append(into, get(API + "discover/" + type + "?language=en-US&include_adult=false"
-                    + "&sort_by=popularity.desc&watch_region=" + region
+                    + "&sort_by=popularity.desc&watch_region=" + region + since
                     + "&with_watch_providers=" + providers + "&api_key=" + apiKey));
         }
     }
