@@ -72,7 +72,11 @@ public final class Options extends Activity {
                 + "\nOn Fire OS 8 adb cannot reach that folder; use /sdcard/Android/media/"
                 + getPackageName() + "/ instead"
                 + "\nAdaptive wallpaper tint shows graphite until you add a wallpaper"
-                + "\nNo internet permission. No tracking, no ads, no accounts.");
+                + (checkSelfPermission(android.Manifest.permission.INTERNET) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    ? "\nNet build: Top shelf talks to TMDB only (api.themoviedb.org, image.tmdb.org), with the key in a"
+                        + " tmdb.key file next to the settings. No tracking, no ads, no accounts."
+                        + "\nMovie and TV data and images: TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB."
+                    : "\nNo internet permission. No tracking, no ads, no accounts."));
         list.addView(about);
 
         setContentView(scroll);

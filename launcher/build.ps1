@@ -4,7 +4,9 @@
 #   Needs a JDK 17 and an Android SDK with platforms;android-$MinSdk and any build-tools.
 #   .\build.ps1                 MIN_SDK 25, one APK for Fire OS 6, 7 and 8 (the published release)
 #   .\build.ps1 -MinSdk 28      Android 9+ only
-param([int]$MinSdk = 25)
+#   .\build.ps1 -Net            adds the INTERNET permission, for Top shelf's TMDB pictures; the
+#                               default build has none and Top shelf then shows the wallpapers
+param([int]$MinSdk = 25, [switch]$Net)
 
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
@@ -53,8 +55,15 @@ if (-not (Test-Path $keystore)) {
 $work = Join-Path ([IO.Path]::GetTempPath()) ("dumbtv-home." + [IO.Path]::GetRandomFileName())
 New-Item -ItemType Directory -Force "$work\gen", "$work\classes", "build" | Out-Null
 try {
+    $manifest = "AndroidManifest.xml"
+    if ($Net) {
+        $manifest = "$work\AndroidManifest.xml"
+        $text = Get-Content AndroidManifest.xml -Raw
+        $text = $text -replace '(\s*)<application', "`n    <uses-permission android:name=`"android.permission.INTERNET`" />`n`$1<application"
+        [IO.File]::WriteAllText($manifest, $text)
+    }
     Invoke-Tool "$bt\aapt2.exe" @("compile", "--dir", "res", "-o", "$work\res.zip")
-    Invoke-Tool "$bt\aapt2.exe" @("link", "-I", $jar, "--manifest", "AndroidManifest.xml", "$work\res.zip",
+    Invoke-Tool "$bt\aapt2.exe" @("link", "-I", $jar, "--manifest", $manifest, "$work\res.zip",
         "--min-sdk-version", "$MinSdk", "--target-sdk-version", "28",
         "--version-code", $version.VERSION_CODE, "--version-name", $version.VERSION_NAME,
         "--java", "$work\gen", "-o", "$work\app.apk")
@@ -82,4 +91,4 @@ try {
 }
 
 $perms = @(& "$bt\aapt2.exe" dump permissions build\dumbtv-home.apk | Select-String 'uses-permission').Count
-Write-Host ("built build\dumbtv-home.apk  {0} bytes  {1} uses-permission entries" -f (Get-Item build\dumbtv-home.apk).Length, $perms)
+Write-Host ("built build\dumbtv-home.apk ({0})  {1} bytes  {2} uses-permission entries" -f $(if ($Net) { "net" } else { "offline" }), (Get-Item build\dumbtv-home.apk).Length, $perms)

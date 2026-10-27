@@ -54,10 +54,10 @@ Undo: `./launcher/install.sh --undo` gives HOME back to Amazon's launcher.
 |---|---|
 | Accent | white, blue, cyan, green, amber, red, pink, violet |
 | Tiles | small, medium, large |
-| Layout | rows, or a grid that wraps to as many columns as fit |
+| Layout | rows, a grid that wraps to as many columns as fit, or top shelf: a large picture across the top and every app in one row under it (below) |
 | Grid columns | by tile size, or 3, 4, 5: 16:9 cards sized so exactly that many fill the width |
 | Fit to one screen | off, on (grid with a column count): cards as large as fit with every app, the clock and the quick settings row on one screen, no scrolling. The clock and date share one line, and the focused app's name shows in the gap under its card |
-| Focus style | outline (an accent ring), or lift and glow: the card rises, grows and glows in the accent color, with rounder corners |
+| Focus style | outline (an accent ring); lift and glow: the card rises, grows and glows in the accent color, with rounder corners; or lift, glow and tilt: also a small 3D tilt, a light sweep across the card, and a glow in the app's own colour |
 | App order | your order, or recently used: the apps row re-sorts on each return home, newest first. It counts apps opened from dumbtv home, plus apps opened any other way (voice, another app) on Fire OS 6, where the launcher already has usage access. Apps never opened keep your order after the rest |
 | App names | on focus, always, never |
 | Row titles | shown, hidden: the small APPS and INPUTS headings |
@@ -94,6 +94,32 @@ without a TV banner, like the Appstore, start hidden; tick them to add them.
   `TvView`: the picture, the input's name for a moment, and "No signal" when nothing
   is connected. Back returns to the home screen, and HOME releases the input at
   once. Nothing new is requested to do this.
+
+## Top shelf and the net build
+
+**Layout › Top shelf** puts a large picture across the top two thirds of the screen and
+every app in one row under it; with **Background › Adaptive solid** the screen takes a dark
+shade of the focused app's colour. The picture follows the focused app:
+
+- **Default build (no permissions):** the wallpaper photos, cross-fading.
+- **Net build** (`.\build.ps1 -Net`, which adds the `INTERNET` permission) **with a TMDB
+  API key:** backdrops of what is popular on the focused app's service in `tmdb.region`
+  (Netflix, Prime Video, Disney+, Max, Tubi, Pluto TV), with the title and year, changing
+  every 8 seconds; "Trending this week" for any other app. Lists are cached for 6 hours and
+  pictures on the device. Without a connection, or on any error, it falls back to the photos.
+
+The key never goes in `home.conf`: it is the first line of its own file, `tmdb.key`, next
+to it (on Fire OS 8, `/sdcard/Android/media/tv.dumbtv.home/tmdb.key`). The app contacts
+only `api.themoviedb.org` and `image.tmdb.org` over HTTPS (enforced in `Shelf.open`), and
+sends the key, the region and the service id; nothing about what is watched. Your own
+"continue watching" is not available to any third-party launcher on Fire TV: apps report it
+to Amazon's cloud, not to Android's shared TV database.
+
+Pressing OK on an app opens the app; TMDB does not know the services' own title ids, so a
+backdrop cannot open its film directly.
+
+Movie and TV data and images: [TMDB](https://www.themoviedb.org). This product uses the
+TMDB API but is not endorsed or certified by TMDB.
 
 ## Photo slideshow and screensaver
 
@@ -172,6 +198,10 @@ dim=40
 rotate=off
 # off on
 lock=off
+# rows grid shelf (layout above lists rows grid; shelf = Top shelf)
+# ring glow tilt (focus, below)
+# two-letter country for Top shelf's "popular on" lists (net build)
+tmdb.region=US
 # auto 3 4 5 (grid layout only)
 columns=auto
 # off on (grid with a column count)

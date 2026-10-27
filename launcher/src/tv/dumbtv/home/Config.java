@@ -62,9 +62,10 @@ final class Config {
     static final Choice TILES = new Choice("tiles", "Tile size", "medium",
             new String[] {"small", "medium", "large"},
             new String[] {"Small", "Medium", "Large"});
+    /** Top shelf: a large picture across the top (TMDB backdrops in the net build, else the photos), apps in one row. */
     static final Choice LAYOUT = new Choice("layout", "Layout", "rows",
-            new String[] {"rows", "grid"},
-            new String[] {"Rows", "Grid"});
+            new String[] {"rows", "grid", "shelf"},
+            new String[] {"Rows", "Grid", "Top shelf"});
     static final Choice ORDER = new Choice("order", "App order", "custom",
             new String[] {"custom", "recent"},
             new String[] {"Your order", "Recently used"});
@@ -109,8 +110,8 @@ final class Config {
             new String[] {"By tile size", "3", "4", "5"});
     /** Outline: an accent ring. Lift and glow: the card rises, grows and glows, with rounder corners. */
     static final Choice FOCUS = new Choice("focus", "Focus style", "ring",
-            new String[] {"ring", "glow"},
-            new String[] {"Outline", "Lift and glow"});
+            new String[] {"ring", "glow", "tilt"},
+            new String[] {"Outline", "Lift and glow", "Lift, glow and tilt"});
     static final Choice CLOCK_SIDE = new Choice("clockside", "Clock position", "left",
             new String[] {"left", "right"},
             new String[] {"Left", "Right"});
@@ -193,6 +194,25 @@ final class Config {
         sharedFile = shared == null ? null : new File(shared, FILE);
         appliedFile = new File(dir, FILE + ".applied");
         refresh();
+    }
+
+    /**
+     * The first line of a small file of its own next to the settings (the media folder first), for
+     * values that must not travel with home.conf, such as an API key. Null when absent or empty.
+     */
+    String secret(String name) {
+        for (File d : new File[] {shared, dir}) {
+            if (d == null) continue;
+            File f = new File(d, name);
+            if (!f.isFile() || f.length() > 4096) continue;
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8))) {
+                String line = r.readLine();
+                if (line != null && !line.trim().isEmpty()) return line.trim();
+            } catch (IOException ignored) {
+                // unreadable: treated as absent
+            }
+        }
+        return null;
     }
 
     /** Changes every time a setting changes, from the UI or from the file on disk. */

@@ -63,6 +63,9 @@ public final class Home extends Activity {
     private Config cfg;
     private LinearLayout column, head, when, quick;
     private Slideshow slideshow;
+    private Hero hero;
+    private Shelf feed;
+    private View shelfGap;
     private boolean swallowKeyUp;
     private final Runnable idleStart = this::startSlideshow;
     private final Runnable letSleep = () -> getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -219,7 +222,7 @@ public final class Home extends Activity {
         }
         List<Item> visible = Catalog.visible(cfg, Catalog.APPS, apps.all, recentFor(Catalog.APPS));
         int fit = getResources().getDisplayMetrics().widthPixels / (cardSize(visible.size())[0] + dp(18)) + 1;
-        if (fit()) fit = visible.size();
+        if (fit() || shelf()) fit = visible.size();
         for (Item it : visible) {
             if (fit-- <= 0) break;
             Catalog.art(getPackageManager(), it);
@@ -243,6 +246,7 @@ public final class Home extends Activity {
         registerReceiver(time, f);
         tick();
         armIdle();
+        if (shelf()) feed.resume();
     }
 
     /** (Re)starts the countdown to Options › Photo slideshow after; any key press calls it. */
@@ -291,6 +295,7 @@ public final class Home extends Activity {
         resumed = false;
         ui.removeCallbacks(idleStart);
         stopSlideshow();
+        feed.pause();
         stopColorAnimation();
         targetColor = 0;
         unregisterReceiver(time);
@@ -490,6 +495,11 @@ public final class Home extends Activity {
         root.addView(shade, new FrameLayout.LayoutParams(MATCH, MATCH));
         tint = new View(this);
         root.addView(tint, new FrameLayout.LayoutParams(MATCH, MATCH));
+        hero = new Hero(this);
+        hero.setVisibility(View.GONE);
+        int heroHeight = Math.round(getResources().getDisplayMetrics().heightPixels * 0.68f);
+        root.addView(hero, new FrameLayout.LayoutParams(MATCH, heroHeight, Gravity.TOP));
+        feed = new Shelf(this, hero);
 
         ScrollView scroll = new ScrollView(this) {
             /** Scrolls in whole rows: the focused row shows complete, and a row starts at the top edge. */
@@ -567,6 +577,9 @@ public final class Home extends Activity {
         head.addView(chip("Options", v -> startActivity(new Intent(this, Options.class))));
         head.addView(chip("Settings", v -> openSettings()));
         column.addView(head, new LinearLayout.LayoutParams(MATCH, WRAP));
+        // Top shelf only: pushes the apps row down to the bottom of the picture.
+        shelfGap = new View(this);
+        column.addView(shelfGap, new LinearLayout.LayoutParams(MATCH, 0));
 
         apps = new Row(Catalog.APPS, "Apps", column);
         inputs = new Row(Catalog.INPUTS, "Inputs", column);
@@ -610,7 +623,9 @@ public final class Home extends Activity {
         v.setOnClickListener(click);
         v.setOnFocusChangeListener((view, has) -> {
             view.animate().scaleX(has ? 1.08f : 1f).scaleY(has ? 1.08f : 1f).setDuration(140).start();
-            if (has) focusBackground(null);
+            if (!has) return;
+            focusBackground(null);
+            if (shelf()) shelfFor(null, null);
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(WRAP, WRAP);
         lp.leftMargin = dp(9);
@@ -622,7 +637,7 @@ public final class Home extends Activity {
 
     /** Clock left with the Options and Settings chips right, or (Clock position › Right) the clock alone at the right. */
     private void layoutHead() {
-        boolean right = "right".equals(cfg.get(Config.CLOCK_SIDE)), fit = fit();
+        boolean right = "right".equals(cfg.get(Config.CLOCK_SIDE)), fit = fit() || shelf();
         head.removeAllViews();
         when.removeAllViews();
         if (fit) {
@@ -724,13 +739,25 @@ public final class Home extends Activity {
         }
         for (TextView c : quickChips) Ui.focusStyle(c, accent, 0x1FFFFFFF, dp(24));
         quick.setVisibility(shortcuts && !locked() ? View.VISIBLE : View.GONE);
-        boolean glow = "glow".equals(cfg.get(Config.FOCUS));
+        boolean glow = glowing(), shelf = shelf();
         String columns = cfg.get(Config.COLUMNS);
         int fixed = "auto".equals(columns) ? 0 : Integer.parseInt(columns);
         for (Row row : new Row[] {apps, inputs}) {
             row.grid.setGaps(dp(glow ? 40 : 18), rowGap());
             row.grid.setColumns(fixed);
         }
+        // Top shelf: the picture across the top, the one-row strip moved under it with narrow edges.
+        hero.setVisibility(shelf ? View.VISIBLE : View.GONE);
+        apps.scroll.setPadding(dp(shelf ? 16 : 42), 0, dp(shelf ? 16 : 42), 0);
+        int gap = 0;
+        if (shelf) {
+            int width = View.MeasureSpec.makeMeasureSpec(getResources().getDisplayMetrics().widthPixels, View.MeasureSpec.EXACTLY);
+            head.measure(width, View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            gap = Math.max(0, hero.getLayoutParams().height - dp(24) - column.getPaddingTop() - head.getMeasuredHeight());
+        }
+        shelfGap.getLayoutParams().height = gap;
+        shelfGap.requestLayout();
+        if (!shelf) feed.pause();
         meter.setVisibility("on".equals(cfg.get(Config.MEMORY)) ? View.VISIBLE : View.GONE);
         meter.setAccent(accent);
         render(apps);
@@ -803,13 +830,16 @@ public final class Home extends Activity {
         int w = size[0], h = Catalog.APPS.equals(row.kind) ? size[1] : Math.round(size[1] * 0.56f);
         String labels = cfg.get(Config.LABELS);
         int accent = cfg.accent();
-        boolean glow = "glow".equals(cfg.get(Config.FOCUS)), fit = fit();
+        boolean glow = glowing(), tilt = "tilt".equals(cfg.get(Config.FOCUS)), nameInGap = fit() || shelf();
         int index = 0, restore = -1;
         for (Item it : shown) {
-            Tile t = new Tile(this, it, row.kind, Catalog.label(cfg, it), w, h, labels, accent, glow, fit);
+            Tile t = new Tile(this, it, row.kind, Catalog.label(cfg, it), w, h, labels, accent, glow, tilt, nameInGap);
             t.setOnClickListener(v -> open((Tile) v));
             t.setOnFocusChangeListener((v, has) -> {
-                if (has) focusBackground(((Tile) v).item);
+                if (!has) return;
+                Tile tile = (Tile) v;
+                focusBackground(tile.item);
+                if (shelf()) shelfFor(Catalog.APPS.equals(tile.kind) ? tile.item.id : null, Catalog.label(cfg, tile.item));
             });
             t.setOnLongClickListener(v -> {
                 if (!locked()) menu((Tile) v);
@@ -819,7 +849,7 @@ public final class Home extends Activity {
                 target.addView(t, new ViewGroup.LayoutParams(WRAP, WRAP));
             } else {
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(WRAP, WRAP);
-                lp.rightMargin = dp(18);
+                lp.rightMargin = stripGap();
                 target.addView(t, lp);
             }
             if (it.id.equals(keep)) restore = index;
@@ -870,6 +900,11 @@ public final class Home extends Activity {
         }
         int color = it == null || it.backgroundColor == 0 ? FocusColor.FALLBACK : it.backgroundColor;
         if ("adaptive-tint".equals(mode)) color = FocusColor.tint(color);
+        // Under the top shelf the whole screen takes the colour, so it is kept dark: 30 % app, 70 % near-black.
+        if (shelf()) color = Color.rgb(
+                Math.round(Color.red(color) * 0.3f + 12 * 0.7f),
+                Math.round(Color.green(color) * 0.3f + 12 * 0.7f),
+                Math.round(Color.blue(color) * 0.3f + 16 * 0.7f));
         if (color == targetColor) return;
         targetColor = color;
         stopColorAnimation();
@@ -896,6 +931,23 @@ public final class Home extends Activity {
         }
     }
 
+    /** Lift and glow, or Lift, glow and tilt. */
+    private boolean glowing() {
+        String f = cfg.get(Config.FOCUS);
+        return "glow".equals(f) || "tilt".equals(f);
+    }
+
+    /** Options › Layout › Top shelf: the picture across the top, the apps in one row under it. */
+    private boolean shelf() {
+        return "shelf".equals(cfg.get(Config.LAYOUT));
+    }
+
+    /** Points the top shelf at the focused app ({@code pkg}), or at "trending" for anything else. */
+    private void shelfFor(String pkg, CharSequence label) {
+        feed.focus(pkg, label);
+        if (resumed) feed.resume();
+    }
+
     /** Options › Fit to one screen, which needs the grid with a column count. */
     private boolean fit() {
         return "on".equals(cfg.get(Config.FIT)) && "grid".equals(cfg.get(Config.LAYOUT))
@@ -905,16 +957,27 @@ public final class Home extends Activity {
     /** The grid's gap between lines: with names drawn under the focused card, it holds the name. */
     private int rowGap() {
         if (fit()) return dp(34);
-        return dp("glow".equals(cfg.get(Config.FOCUS)) ? 28 : 18);
+        return dp(glowing() ? 28 : 18);
+    }
+
+    /** Space between cards in the one-row strip; Top shelf packs them closer to fit every app. */
+    private int stripGap() {
+        return dp(shelf() ? 14 : 18);
     }
 
     /** Card size for a row of {@code count} items. */
     private int[] cardSize(int count) {
+        if (shelf() && count > 0) {
+            // Every app in the one row between the shelf's 30 dp edges, at most 170 dp wide.
+            int room = getResources().getDisplayMetrics().widthPixels - 2 * dp(30);
+            int w = Math.min(dp(170), room / count - stripGap());
+            return new int[] {w, w * 9 / 16};
+        }
         String columns = cfg.get(Config.COLUMNS);
         if ("grid".equals(cfg.get(Config.LAYOUT)) && !"auto".equals(columns)) {
             // 16:9 cards sized so exactly that many fill the width between the 56 dp edges.
             int n = Integer.parseInt(columns);
-            int gap = dp("glow".equals(cfg.get(Config.FOCUS)) ? 40 : 18);
+            int gap = dp(glowing() ? 40 : 18);
             int room = getResources().getDisplayMetrics().widthPixels - 2 * dp(56);
             int w = (room - (n - 1) * gap) / n;
             if (fit() && count > 0) {

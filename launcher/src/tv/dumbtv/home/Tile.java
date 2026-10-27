@@ -1,12 +1,16 @@
 package tv.dumbtv.home;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.DashPathEffect;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.media.tv.TvInputManager;
 import android.text.TextPaint;
@@ -17,18 +21,25 @@ import android.view.animation.DecelerateInterpolator;
 /**
  * A card drawn in one pass: banner, or icon plus name, or an input name; focus ring on top. With
  * Options › Focus style › Lift and glow the card instead rises and grows over a soft accent glow
- * drawn past its edges, which the parents' clipChildren(false) lets through.
+ * drawn past its edges, which the parents' clipChildren(false) lets through. Lift, glow and tilt adds
+ * a small 3D tilt, a light sweep across the card as it takes focus, and a glow in the app's own colour.
  */
 final class Tile extends View {
     private static final float FOCUS_SCALE = 1.08f;
     private static final float GLOW_SCALE = 1.1f;
+    private static final float TILT_SCALE = 1.14f;
 
     final Item item;
     final String kind;
     private final CharSequence title;
     private final int cardW, cardH, labelH, labelRoom;
-    private final boolean labelAlways, labelOnFocus, glow;
+    private final boolean labelAlways, labelOnFocus, glow, tilt;
+    private final int accent;
     private final float radius, stroke, lift;
+    private final Paint sweep = new Paint(Paint.ANTI_ALIAS_FLAG);
+    /** Position of the light sweep across the card, -1 when none is running. */
+    private float sweepAt = -1f;
+    private ValueAnimator sweeper;
     private final RectF card = new RectF();
     private final Path clip = new Path();
     private final Path arrow = new Path();
@@ -42,21 +53,24 @@ final class Tile extends View {
     private boolean moving;
 
     Tile(Context c, Item item, String kind, CharSequence title, int cardW, int cardH,
-            String labels, int accent, boolean glow, boolean nameInGap) {
+            String labels, int accent, boolean glow, boolean tilt, boolean nameInGap) {
         super(c);
         this.item = item;
         this.kind = kind;
         this.title = title;
         this.cardW = cardW;
         this.cardH = cardH;
-        this.glow = glow;
+        this.glow = glow || tilt;
+        this.tilt = tilt;
+        this.accent = accent;
+        if (tilt) setCameraDistance(c.getResources().getDisplayMetrics().density * 6000);
         boolean app = Catalog.APPS.equals(kind);
         // With nameInGap the name is drawn past the bottom edge, in the row gap the grid leaves for it.
-        labelRoom = app ? Ui.dp(c, glow ? 32 : 26) : 0;
+        labelRoom = app ? Ui.dp(c, this.glow ? 32 : 26) : 0;
         labelH = nameInGap ? 0 : labelRoom;
         labelAlways = "always".equals(labels);
         labelOnFocus = "focus".equals(labels);
-        radius = glow ? Math.max(Ui.dp(c, 12), cardW / 14f) : Ui.dp(c, 10);
+        radius = this.glow ? Math.max(Ui.dp(c, 12), cardW / 14f) : Ui.dp(c, 10);
         stroke = Ui.dp(c, 2.5f);
         lift = Ui.dp(c, 8);
 
@@ -109,7 +123,23 @@ final class Tile extends View {
     protected void onFocusChanged(boolean focused, int direction, Rect previous) {
         super.onFocusChanged(focused, direction, previous);
         animate().cancel();
-        if (glow) {
+        if (tilt) {
+            float s = focused ? TILT_SCALE : 1f;
+            animate().scaleX(s).scaleY(s).translationY(focused ? -lift : 0f)
+                    .rotationX(focused ? 5f : 0f).rotationY(focused ? -9f : 0f)
+                    .setDuration(focused ? 240 : 180).setInterpolator(new DecelerateInterpolator()).start();
+            if (sweeper != null) sweeper.cancel();
+            sweepAt = -1f;
+            if (focused) {
+                sweeper = ValueAnimator.ofFloat(-0.5f, 1.5f).setDuration(900);
+                sweeper.setStartDelay(120);
+                sweeper.addUpdateListener(a -> {
+                    sweepAt = (Float) a.getAnimatedValue();
+                    invalidate();
+                });
+                sweeper.start();
+            }
+        } else if (glow) {
             float s = focused ? GLOW_SCALE : 1f;
             animate().scaleX(s).scaleY(s).translationY(focused ? -lift : 0f)
                     .setDuration(focused ? 200 : 160).setInterpolator(new DecelerateInterpolator()).start();
@@ -126,7 +156,10 @@ final class Tile extends View {
     protected void onDraw(Canvas canvas) {
         Drawable banner = item.banner, icon = item.icon;
         boolean lit = glow && isFocused() && !moving;
-        if (lit) canvas.drawRoundRect(card, radius, radius, halo);
+        if (lit) {
+            if (tilt) halo.setShadowLayer(Ui.dp(getContext(), 30), 0, Ui.dp(getContext(), 12), glowColor());
+            canvas.drawRoundRect(card, radius, radius, halo);
+        }
         canvas.save();
         canvas.clipPath(clip);
         canvas.drawRect(card, fill);
@@ -143,6 +176,13 @@ final class Tile extends View {
             drawLine(canvas, inner, cardW / 2f, cardH / 2f - (inner.ascent() + inner.descent()) / 2);
         }
         if (moving) canvas.drawColor(0x99000000);
+        if (lit && sweepAt > -0.5f) {
+            // A diagonal band of light, a third of the card wide, crossing it once.
+            float band = cardW * 0.35f, x = sweepAt * cardW;
+            sweep.setShader(new LinearGradient(x - band, 0, x + band, cardH * 0.7f,
+                    new int[] {0x00FFFFFF, 0x59FFFFFF, 0x00FFFFFF}, null, Shader.TileMode.CLAMP));
+            canvas.drawRect(card, sweep);
+        }
         canvas.restore();
 
         if (item.state == TvInputManager.INPUT_STATE_CONNECTED) {
@@ -162,6 +202,17 @@ final class Tile extends View {
         if (labelRoom > 0 && label) {
             drawLine(canvas, under, cardW / 2f, cardH + labelRoom - Ui.dp(getContext(), 6));
         }
+    }
+
+    /** The app's own colour (as worked out for the adaptive background), brightened for a glow. */
+    private int glowColor() {
+        int c = item.backgroundColor;
+        if (c == 0) return 0x99000000 | accent & 0xFFFFFF;
+        float[] hsv = new float[3];
+        Color.colorToHSV(c, hsv);
+        hsv[1] = Math.min(1f, hsv[1] * 1.15f);
+        hsv[2] = Math.max(hsv[2], 0.9f);
+        return 0xA6000000 | Color.HSVToColor(hsv) & 0xFFFFFF;
     }
 
     private void drawLine(Canvas canvas, TextPaint paint, float x, float baseline) {
