@@ -246,7 +246,10 @@ public final class Home extends Activity {
         registerReceiver(time, f);
         tick();
         armIdle();
-        if (shelf()) feed.resume();
+        if (shelf()) {
+            feed.resume();
+            feed.recheck();
+        }
     }
 
     /** (Re)starts the countdown to Options › Photo slideshow after; any key press calls it. */
@@ -333,6 +336,7 @@ public final class Home extends Activity {
         super.onNewIntent(intent);
         stopSlideshow();
         armIdle();
+        if (shelf()) feed.recheck();
         if (moving != null) stopMoving();
         if (resumed) focusFirst();
     }

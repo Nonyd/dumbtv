@@ -83,6 +83,8 @@ final class Shelf {
     private List<File> photos = Collections.emptyList();
     private int index, generation;
     private boolean running;
+    /** Whether the shown list was loaded with a key in place; a key added later forces a reload. */
+    private volatile boolean onlineAtLoad;
 
     Shelf(Context context, Hero hero) {
         this.context = context;
@@ -117,6 +119,14 @@ final class Shelf {
         }
     }
 
+    /** On a return home: reloads the current list if a key was added or removed since it loaded. */
+    void recheck() {
+        if (showing != null && online(context) != onlineAtLoad) {
+            ui.removeCallbacks(settle);
+            ui.post(settle);
+        }
+    }
+
     void pause() {
         running = false;
         ui.removeCallbacks(next);
@@ -128,7 +138,7 @@ final class Shelf {
         final String key = wanted, appLabel = label;
         // Focus often passes through another tile and straight back (a re-render, a row refresh):
         // returning to what is already up keeps it, instead of starting the list over.
-        if (key.equals(showing) && (!picks.isEmpty() || !photos.isEmpty())) {
+        if (key.equals(showing) && (!picks.isEmpty() || !photos.isEmpty()) && online(context) == onlineAtLoad) {
             if (running) {
                 ui.removeCallbacks(next);
                 ui.postDelayed(next, HOLD_MS);
@@ -139,7 +149,8 @@ final class Shelf {
         ui.removeCallbacks(next);
         io.execute(() -> {
             List<Pick> list = Collections.emptyList();
-            if (online(context)) {
+            onlineAtLoad = online(context);
+            if (onlineAtLoad) {
                 try {
                     list = list(key);
                 } catch (Exception e) {
