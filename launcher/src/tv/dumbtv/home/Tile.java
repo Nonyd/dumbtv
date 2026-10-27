@@ -200,7 +200,9 @@ final class Tile extends View {
         if (moving) drawArrows(canvas);
         boolean label = banner != null && (labelAlways || labelOnFocus && isFocused());
         if (labelRoom > 0 && label) {
-            drawLine(canvas, under, cardW / 2f, cardH + labelRoom - Ui.dp(getContext(), 6));
+            // A name drawn in the gap below may run wider than a narrow card.
+            float room = labelH == 0 ? cardW * 1.5f : cardW - Ui.dp(getContext(), 16);
+            drawLine(canvas, under, cardW / 2f, cardH + labelRoom - Ui.dp(getContext(), 6), room);
         }
     }
 
@@ -216,7 +218,10 @@ final class Tile extends View {
     }
 
     private void drawLine(Canvas canvas, TextPaint paint, float x, float baseline) {
-        float room = cardW - Ui.dp(getContext(), 16);
+        drawLine(canvas, paint, x, baseline, cardW - Ui.dp(getContext(), 16));
+    }
+
+    private void drawLine(Canvas canvas, TextPaint paint, float x, float baseline, float room) {
         CharSequence s = TextUtils.ellipsize(title, paint, room, TextUtils.TruncateAt.END);
         canvas.drawText(s, 0, s.length(), x, baseline, paint);
     }

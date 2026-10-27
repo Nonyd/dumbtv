@@ -63,12 +63,14 @@ final class Shelf {
     }
 
     private static final class Pick {
-        final String title, year, backdrop;
+        /** {@code region} is where the list came from: tmdb.region, or US when that had none. */
+        final String title, year, backdrop, region;
 
-        Pick(String title, String year, String backdrop) {
+        Pick(String title, String year, String backdrop, String region) {
             this.title = title;
             this.year = year;
             this.backdrop = backdrop;
+            this.region = region;
         }
     }
 
@@ -78,7 +80,7 @@ final class Shelf {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Runnable next = this::next;
     private final Runnable settle = this::load;
-    private String wanted, showing, label = "", caption = "";
+    private String wanted, showing, label = "";
     private List<Pick> picks = Collections.emptyList();
     private List<File> photos = Collections.emptyList();
     private int index, generation;
@@ -167,16 +169,16 @@ final class Shelf {
                 picks = got;
                 photos = pool;
                 index = 0;
-                caption = caption(key, appLabel);
+                label = appLabel;
                 next();
             });
         });
     }
 
-    private String caption(String key, String appLabel) {
-        if (TRENDING.equals(key)) return "Trending this week";
-        Locale where = new Locale("", region());
-        return "Popular on " + appLabel + " in " + where.getDisplayCountry(Locale.ENGLISH);
+    private String caption(Pick p) {
+        if (TRENDING.equals(showing)) return "Trending this week";
+        String country = new Locale("", p.region).getDisplayCountry(Locale.ENGLISH);
+        return "Popular on " + label + " in " + ("US".equals(p.region) ? "the " + country : country);
     }
 
     /** Shows the next picture of the current list and re-arms. */
@@ -195,7 +197,7 @@ final class Shelf {
                 final Bitmap shown = b;
                 ui.post(() -> {
                     if (gen != generation) return;
-                    if (shown != null) hero.show(shown, p.year.isEmpty() ? p.title : p.title + "  (" + p.year + ")", caption);
+                    if (shown != null) hero.show(shown, p.year.isEmpty() ? p.title : p.title + "  (" + p.year + ")", caption(p));
                     if (running && picks.size() > 1) ui.postDelayed(next, HOLD_MS);
                 });
             });
@@ -222,7 +224,7 @@ final class Shelf {
     /** The list for {@code key}, from a cache younger than {@link #LIST_TTL_MS} or from TMDB. */
     private List<Pick> list(String key) throws IOException, org.json.JSONException {
         String region = region();
-        File cache = new File(context.getCacheDir(), "shelf-" + key.replace('.', '_') + "-" + region + ".json");
+        File cache = new File(context.getCacheDir(), "shelf2-" + key.replace('.', '_') + "-" + region + ".json");
         String body = null;
         if (cache.isFile() && System.currentTimeMillis() - cache.lastModified() < LIST_TTL_MS) {
             body = read(new java.io.FileInputStream(cache));
@@ -230,22 +232,26 @@ final class Shelf {
         if (body == null) {
             String apiKey = URLEncoder.encode(Config.get(context).secret("tmdb.key"), "UTF-8");
             JSONArray merged = new JSONArray();
+            String used = region;
             if (TRENDING.equals(key)) {
                 append(merged, get(API + "trending/all/week?language=en-US&api_key=" + apiKey));
             } else {
-                String providers = URLEncoder.encode(PROVIDERS.get(key), "UTF-8");
-                for (String type : new String[] {"movie", "tv"}) {
-                    append(merged, get(API + "discover/" + type + "?language=en-US&include_adult=false"
-                            + "&sort_by=popularity.desc&watch_region=" + region
-                            + "&with_watch_providers=" + providers + "&api_key=" + apiKey));
+                discover(merged, key, region, apiKey);
+                // Services not offered in tmdb.region (Disney+, Max, Tubi, Pluto TV in Nigeria, used
+                // through a VPN) have no list there: show the US one, and say so in the caption.
+                if (merged.length() == 0 && !"US".equals(region)) {
+                    used = "US";
+                    discover(merged, key, used, apiKey);
                 }
             }
-            body = merged.toString();
+            body = new JSONObject().put("region", used).put("results", merged).toString();
             try (OutputStream out = new FileOutputStream(cache)) {
                 out.write(body.getBytes(StandardCharsets.UTF_8));
             }
         }
-        JSONArray all = new JSONArray(body);
+        JSONObject cached = new JSONObject(body);
+        String from = cached.optString("region", region);
+        JSONArray all = cached.getJSONArray("results");
         List<Pick> out = new ArrayList<>();
         for (int i = 0; i < all.length(); i++) {
             JSONObject o = all.getJSONObject(i);
@@ -253,10 +259,21 @@ final class Shelf {
             if (backdrop.isEmpty() || "null".equals(backdrop)) continue;
             String title = o.optString("title", o.optString("name", ""));
             String date = o.optString("release_date", o.optString("first_air_date", ""));
-            out.add(new Pick(title, date.length() >= 4 ? date.substring(0, 4) : "", backdrop));
+            out.add(new Pick(title, date.length() >= 4 ? date.substring(0, 4) : "", backdrop, from));
         }
         Collections.shuffle(out);
         return out.size() > 20 ? new ArrayList<>(out.subList(0, 20)) : out;
+    }
+
+    /** Popular movies, then TV, on {@code key}'s service in {@code region}. */
+    private static void discover(JSONArray into, String key, String region, String apiKey)
+            throws IOException, org.json.JSONException {
+        String providers = URLEncoder.encode(PROVIDERS.get(key), "UTF-8");
+        for (String type : new String[] {"movie", "tv"}) {
+            append(into, get(API + "discover/" + type + "?language=en-US&include_adult=false"
+                    + "&sort_by=popularity.desc&watch_region=" + region
+                    + "&with_watch_providers=" + providers + "&api_key=" + apiKey));
+        }
     }
 
     private static void append(JSONArray into, String json) throws org.json.JSONException {

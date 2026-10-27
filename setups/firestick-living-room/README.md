@@ -106,20 +106,19 @@ Many settings can also be changed on the TV: press **☰ (Menu)** on any app car
 
 The home screen now uses the **top shelf** look: a big picture across the top, your apps in one
 row, and the background taking a dark shade of the highlighted app's colour. With a TMDB key in
-place, the picture shows what's popular on the highlighted app in Nigeria (Netflix, Prime Video,
-Disney+, Max, Tubi, Pluto TV), or "Trending this week" for the others. Without the key, or without
-internet, it shows your wallpaper photos.
+place, the picture shows what's popular on the highlighted app: in Nigeria for Netflix and Prime
+Video, and in the United States for Disney+, Max, Tubi and Pluto TV (they have no Nigerian
+catalogue); "Trending this week" for YouTube, Spotify and Plex. The caption always says which.
+Without the key, or without internet, it shows your wallpaper photos.
 
 **Adding or changing the TMDB key** (from themoviedb.org → Settings → API, the short "API Key"):
-1. In this folder, create a text file named `tmdb.key` (Notepad: Save as type "All files") with the
-   key as its only line.
-2. From PowerShell in this folder:
+from PowerShell in this folder run
 
-   ```
-   adb push tmdb.key /sdcard/Android/media/tv.dumbtv.home/tmdb.key
-   ```
+```
+.\set-tmdb-key.ps1
+```
 
-3. Press Home. The pictures switch over within a few seconds.
+paste the key at the hidden prompt, and wait for "On the Stick: OK". Then press Home.
 
 Keep `tmdb.key` out of anything you share; it is deliberately not in `home.conf`.
 
